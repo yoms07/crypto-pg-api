@@ -23,8 +23,9 @@ export class AuthService {
   constructor(
     @InjectModel(User.name) private userModel: Model<User>,
     @InjectModel(EmailVerification.name)
+    @InjectModel(Otp.name)
+    private otpModel: Model<Otp>,
     private emailVerifModel: Model<EmailVerification>,
-    @InjectModel(Otp.name) private otpModel: Model<Otp>,
     private mailService: MailService,
   ) {}
 
