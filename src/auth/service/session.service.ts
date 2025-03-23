@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { ConfigService, ConfigType } from '@nestjs/config';
+import { ConfigType } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Session } from '../entities/session.entity';
 import { User } from '../schemas/user.schema';
@@ -29,7 +29,6 @@ export class SessionService {
   });
 
   constructor(
-    private configService: ConfigService,
     private jwtService: JwtService,
     @InjectModel(User.name) private userModel: Model<User>,
     @Inject(jwtConfig.KEY) private config: ConfigType<typeof jwtConfig>,
