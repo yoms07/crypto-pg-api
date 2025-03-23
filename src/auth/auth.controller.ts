@@ -25,7 +25,6 @@ import { VerifyOtpDto, verifyOtpDto } from './dto/verify-otp.dto';
 import { User } from './schemas/user.schema';
 import { Session } from './entities/session.entity';
 import { ApiResponse, ApiResponseBuilder } from 'src/common/response.common';
-import { EmailVerification } from './schemas';
 
 @Controller('auth')
 export class AuthController {
@@ -68,11 +67,11 @@ export class AuthController {
   @UsePipes(new ZodValidationPipe(registerEmailDto))
   async registerEmail(
     @Body() registerDto: RegisterEmailDto,
-  ): Promise<ApiResponse<EmailVerification>> {
-    const response = await this.authService.registerEmail(registerDto);
+  ): Promise<ApiResponse<null>> {
+    await this.authService.registerEmail(registerDto);
     return ApiResponseBuilder.success(
-      response,
-      'Successfully registered email',
+      null,
+      'Successfully registered email. Please check your email to verify your account',
     );
   }
 
