@@ -22,9 +22,9 @@ import { MailService } from '../../mail/mail.service';
 export class AuthService {
   constructor(
     @InjectModel(User.name) private userModel: Model<User>,
-    @InjectModel(EmailVerification.name)
     @InjectModel(Otp.name)
     private otpModel: Model<Otp>,
+    @InjectModel(EmailVerification.name)
     private emailVerifModel: Model<EmailVerification>,
     private mailService: MailService,
   ) {}
