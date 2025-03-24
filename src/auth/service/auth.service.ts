@@ -189,6 +189,7 @@ export class AuthService {
       expires_at: expiresAt,
       is_used: false,
       attempt_count: 0,
+      created_at: new Date(),
     });
 
     const savedOtp = await otp.save();

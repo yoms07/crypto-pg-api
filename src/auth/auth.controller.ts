@@ -22,7 +22,6 @@ import {
 import { RegisterEmailDto, registerEmailDto } from './dto/register-email.dto';
 import { VerifyEmailDto, verifyEmailDto } from './dto/verify-email.dto';
 import { VerifyOtpDto, verifyOtpDto } from './dto/verify-otp.dto';
-import { User } from './schemas/user.schema';
 import { Session } from './entities/session.entity';
 import { ApiResponse, ApiResponseBuilder } from 'src/common/response.common';
 
@@ -45,20 +44,20 @@ export class AuthController {
     );
   }
 
-  @Post(':provider/login')
+  @Post('oauth/:provider/login')
   @UsePipes(new ZodValidationPipe(createOauthUserDto))
   async oauthLogin(@Body() createOauthUserDto: CreateOauthUserDto): Promise<
     ApiResponse<{
       accessToken: string;
       refreshToken: string;
-      user: User;
+      session: Session;
     }>
   > {
     const user = await this.authService.oauthLogin(createOauthUserDto);
-    const { accessToken, refreshToken } =
+    const { accessToken, refreshToken, session } =
       await this.sessionService.createSession(user);
     return ApiResponseBuilder.success(
-      { accessToken, refreshToken, user },
+      { accessToken, refreshToken, session },
       'Successfully login with OAuth provider',
     );
   }
@@ -90,14 +89,14 @@ export class AuthController {
     ApiResponse<{
       accessToken: string;
       refreshToken: string;
-      user: User;
+      session: Session;
     }>
   > {
     const user = await this.authService.verifyLoginOtp(verifyOtpDto);
-    const { accessToken, refreshToken } =
+    const { accessToken, refreshToken, session } =
       await this.sessionService.createSession(user);
     return ApiResponseBuilder.success(
-      { accessToken, refreshToken, user },
+      { accessToken, refreshToken, session },
       'Successfully verified OTP',
     );
   }

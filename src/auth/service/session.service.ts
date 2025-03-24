@@ -8,10 +8,10 @@ import { Model } from 'mongoose';
 import jwtConfig from 'src/config/jwt.config';
 
 interface JwtPayload {
+  session: Session;
   sub: string; // user id
   iat: number; // issued at
   exp: number; // expiration time
-  email: string;
   userAgent?: string;
   ipAddress?: string;
 }
@@ -48,7 +48,18 @@ export class SessionService {
     // Create access token
     const accessTokenPayload: JwtPayload = {
       sub: user.id as string,
-      email: user.email,
+      session: {
+        userId: user.id as string,
+        email: user.email,
+        issuedAt: new Date(now * 1000),
+        expiresAt: new Date((now + this.config.jwt_session_duration) * 1000),
+        userAgent: userAgent,
+        ipAddress: ipAddress,
+        isActive: user.is_active,
+        name: user.name,
+        provider: user.provider,
+        emailVerified: user.email_verified,
+      },
       iat: now,
       exp: now + this.config.jwt_session_duration,
     };
@@ -76,6 +87,10 @@ export class SessionService {
       refreshExpiresAt: new Date(
         (now + this.config.jwt_refresh_duration) * 1000,
       ),
+      emailVerified: user.email_verified,
+      isActive: user.is_active,
+      name: user.name,
+      provider: user.provider,
       ipAddress: ipAddress,
       userAgent: userAgent,
     };
@@ -94,7 +109,11 @@ export class SessionService {
       // Create session object from payload
       const session: Session = {
         userId: payload.sub,
-        email: payload.email,
+        email: payload.session.email,
+        isActive: payload.session.isActive,
+        name: payload.session.name,
+        provider: payload.session.provider,
+        emailVerified: payload.session.emailVerified,
         issuedAt: new Date(payload.iat * 1000),
         expiresAt: new Date(payload.exp * 1000),
         userAgent: payload.userAgent,
