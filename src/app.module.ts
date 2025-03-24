@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -10,6 +10,9 @@ import { MailModule } from './mail/mail.module';
 import appConfig from './config';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
+import { WinstonModule, utilities } from 'nest-winston';
+import * as winston from 'winston';
+import { AppLoggerMiddleware } from './common/middlewares/logging.middleware';
 
 @Module({
   imports: [
@@ -50,6 +53,21 @@ import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handleba
         },
       }),
     }),
+    WinstonModule.forRoot({
+      transports: [
+        new winston.transports.Console({
+          level: 'debug',
+          format: winston.format.combine(
+            winston.format.timestamp(),
+            winston.format.ms(),
+            utilities.format.nestLike('Lisk PG', {
+              prettyPrint: true,
+              colors: true,
+            }),
+          ),
+        }),
+      ],
+    }),
     AuthModule,
     ProfileModule,
     MailModule,
@@ -57,4 +75,8 @@ import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handleba
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(AppLoggerMiddleware).forRoutes('*');
+  }
+}
