@@ -17,6 +17,7 @@ import { VerifyOtpDto } from '../dto/verify-otp.dto';
 import { hash, compare } from 'bcrypt';
 import * as crypto from 'crypto';
 import { MailService } from '../../mail/mail.service';
+import { Session } from '../entities/session.entity';
 
 @Injectable()
 export class AuthService {
@@ -251,6 +252,20 @@ export class AuthService {
     // Mark OTP as used
     otp.is_used = true;
     await otp.save();
+
+    return user;
+  }
+
+  async getUserBySession(session: Session): Promise<User> {
+    const user = await this.userModel.findById(session.userId);
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    if (!user.is_active) {
+      throw new UnauthorizedException('User account is inactive');
+    }
 
     return user;
   }
