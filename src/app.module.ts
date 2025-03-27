@@ -3,7 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
-import { ProfileModule } from './profile/profile.module';
+import { BusinessProfileModule } from './business-profile/business-profile.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MailModule } from './mail/mail.module';
@@ -13,6 +13,7 @@ import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handleba
 import { WinstonModule, utilities } from 'nest-winston';
 import * as winston from 'winston';
 import { AppLoggerMiddleware } from './common/middlewares/logging.middleware';
+import { PaymentModule } from './payment/payment.module';
 
 @Module({
   imports: [
@@ -69,8 +70,9 @@ import { AppLoggerMiddleware } from './common/middlewares/logging.middleware';
       ],
     }),
     AuthModule,
-    ProfileModule,
+    BusinessProfileModule,
     MailModule,
+    PaymentModule,
   ],
   controllers: [AppController],
   providers: [AppService],
