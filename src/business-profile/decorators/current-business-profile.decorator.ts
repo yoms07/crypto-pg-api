@@ -6,7 +6,7 @@ import {
 import { AppRequest } from 'express';
 import { BusinessProfile } from '../schemas/business-profile.schema';
 
-export const CurrentUser = createParamDecorator(
+export const CurrentBusinessProfile = createParamDecorator(
   (data: unknown, ctx: ExecutionContext): BusinessProfile => {
     const request = ctx.switchToHttp().getRequest<AppRequest>();
     const user = request.user;
