@@ -8,7 +8,7 @@ import { HydratedDocument } from 'mongoose';
 export type CheckoutCustomizationDocument =
   HydratedDocument<CheckoutCustomization>;
 
-@Schema({ timestamps: false })
+@Schema({ timestamps: false, id: false })
 export class CheckoutCustomization extends Document {
   @Prop()
   primary_color: string;

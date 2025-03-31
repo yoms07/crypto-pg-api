@@ -2,51 +2,61 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { BusinessProfile } from '../schemas/business-profile.schema';
-import { Wallet } from '../schemas/wallet.schema';
 import * as crypto from 'crypto';
 import { CheckoutCustomization } from '../schemas/checkout-customization.schema';
 import { ApiKey } from '../schemas/api-key.schema';
+import { Wallet } from '../schemas/wallet.schema';
 
 @Injectable()
 export class BusinessProfileService {
   constructor(
     @InjectModel(BusinessProfile.name)
     private businessProfileModel: Model<BusinessProfile>,
+    @InjectModel(CheckoutCustomization.name)
+    private checkoutCustomizationModel: Model<CheckoutCustomization>,
     @InjectModel(ApiKey.name)
     private apiKeyModel: Model<ApiKey>,
     @InjectModel(Wallet.name)
     private walletModel: Model<Wallet>,
-    @InjectModel(CheckoutCustomization.name)
-    private checkoutCustomizationModel: Model<CheckoutCustomization>,
   ) {}
 
-  async getBusinessProfile(userId: string): Promise<BusinessProfile> {
-    let profile = await this.businessProfileModel
-      .findOne({ user_id: userId })
-      .populate('api_keys')
-      .populate('wallets');
+  async createDefaultProfile(userId: string): Promise<BusinessProfile> {
+    const profile = new this.businessProfileModel({
+      user_id: userId,
+      business_name: 'My Business',
+      webhook_url: '',
+      webhook_secret: crypto.randomBytes(32).toString('hex'),
+      logo_url: '',
+      business_description: '',
+      contact_email: '',
+      contact_phone: '',
+      wallet: null,
+      api_key: null,
+      checkout_customization: null,
+    });
+    return await profile.save();
+  }
+
+  async getAllProfiles(userId: string): Promise<BusinessProfile[]> {
+    const profiles = await this.businessProfileModel.find({ user_id: userId });
+    if (!profiles || profiles.length === 0) {
+      const profile = await this.createDefaultProfile(userId);
+      return [profile];
+    }
+    return profiles;
+  }
+
+  async getProfileById(
+    userId: string,
+    profileId: string,
+  ): Promise<BusinessProfile> {
+    const profile = await this.businessProfileModel.findOne({
+      _id: profileId,
+      user_id: userId,
+    });
 
     if (!profile) {
-      profile = new this.businessProfileModel({
-        user_id: userId,
-        business_name: 'My Business',
-        webhook_url: '',
-        webhook_secret: crypto.randomBytes(32).toString('hex'),
-      });
-      await profile.save();
-    }
-
-    if (!profile.checkout_customization) {
-      const defaultCustomization = new this.checkoutCustomizationModel({
-        business_id: profile._id,
-        primary_color: '#0066FF',
-        secondary_color: '#FFFFFF',
-        logo_position: 'center',
-        background_image_url: '',
-        custom_css: '',
-      });
-      profile.checkout_customization = defaultCustomization;
-      await profile.save();
+      throw new NotFoundException('Business profile not found');
     }
 
     return profile;
@@ -54,9 +64,11 @@ export class BusinessProfileService {
 
   async updateProfile(
     userId: string,
+    profileId: string,
     updateData: Partial<BusinessProfile>,
   ): Promise<BusinessProfile> {
     const profile = await this.businessProfileModel.findOne({
+      _id: profileId,
       user_id: userId,
     });
     if (!profile) {
@@ -72,45 +84,48 @@ export class BusinessProfileService {
       'logo_url',
     ] as const;
 
-    allowedFields.forEach((field) => {
-      if (field in updateData) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        profile[field] = updateData[field as keyof typeof updateData];
+    type AllowedField = (typeof allowedFields)[number];
+
+    allowedFields.forEach((field: AllowedField) => {
+      const value = updateData[field];
+      if (value !== undefined) {
+        profile[field] = value;
       }
     });
 
     return await profile.save();
   }
 
-  async updateWalletAddress(
+  async updateWallet(
     userId: string,
-    walletData: { address: string; type: string },
-  ): Promise<Wallet> {
+    profileId: string,
+    walletData: { wallet_address: string; wallet_type: string },
+  ): Promise<BusinessProfile> {
     const profile = await this.businessProfileModel.findOne({
+      _id: profileId,
       user_id: userId,
     });
     if (!profile) {
       throw new NotFoundException('Business profile not found');
     }
-
-    const wallet = new this.walletModel({
-      business_id: profile._id,
-      wallet_address: walletData.address,
-      wallet_type: walletData.type,
-      is_primary: true,
-    });
-
-    // Set all other wallets as non-primary
-    await this.walletModel.updateMany(
-      { business_id: profile._id },
-      { is_primary: false },
-    );
-
-    return await wallet.save();
+    if (!profile.wallet) {
+      profile.wallet = new this.walletModel({
+        wallet_address: walletData.wallet_address,
+        wallet_type: walletData.wallet_type,
+        is_primary: true,
+      });
+    }
+    profile.wallet.wallet_address = walletData.wallet_address;
+    profile.wallet.wallet_type = walletData.wallet_type;
+    return await profile.save();
   }
 
-  async addApiKey(userId: string, keyName: string): Promise<ApiKey> {
+  async updateApiKey(
+    userId: string,
+    profileId: string,
+  ): Promise<{ profile: BusinessProfile; key_value: string }> {
     const profile = await this.businessProfileModel.findOne({
+      _id: profileId,
       user_id: userId,
     });
     if (!profile) {
@@ -119,93 +134,77 @@ export class BusinessProfileService {
 
     const keyValue = crypto.randomBytes(32).toString('hex');
     const keyHash = crypto.createHash('sha256').update(keyValue).digest('hex');
-
-    const apiKey = new this.apiKeyModel({
-      business_id: profile._id,
-      key_hash: keyHash,
-      name: keyName,
-      is_active: true,
-    });
-
-    const savedKey = await apiKey.save();
-    return savedKey;
+    if (!profile.api_key) {
+      profile.api_key = new this.apiKeyModel({
+        key_hash: keyHash,
+        is_active: true,
+        last_used_at: null,
+      });
+    }
+    profile.api_key.key_hash = keyHash;
+    profile.api_key.is_active = true;
+    profile.api_key.last_used_at = null;
+    const savedProfile = await profile.save();
+    return {
+      profile: savedProfile,
+      key_value: keyValue, // Return the actual key value for one-time display
+    };
   }
 
-  async deleteApiKey(userId: string, keyId: string): Promise<boolean> {
+  async deleteApiKey(
+    userId: string,
+    profileId: string,
+  ): Promise<BusinessProfile> {
     const profile = await this.businessProfileModel.findOne({
+      _id: profileId,
       user_id: userId,
     });
     if (!profile) {
       throw new NotFoundException('Business profile not found');
     }
 
-    const result = await this.apiKeyModel.deleteOne({
-      _id: keyId,
-      business_id: profile._id,
-    });
-
-    return result.deletedCount > 0;
+    profile.api_key = null;
+    return await profile.save();
   }
 
   async updateCheckoutCustomization(
     userId: string,
-    customizationData: Partial<CheckoutCustomization>,
+    profileId: string,
+    customization: Partial<CheckoutCustomization>,
   ): Promise<BusinessProfile> {
     const profile = await this.businessProfileModel.findOne({
+      _id: profileId,
       user_id: userId,
     });
-    if (!profile) {
-      throw new NotFoundException('Business profile not found');
-    }
-
-    let customization = await this.checkoutCustomizationModel.findOne({
-      business_id: profile._id,
-    });
-
-    if (!customization) {
-      customization = new this.checkoutCustomizationModel({
-        business_id: profile._id,
-        primary_color: '#0066FF',
-        secondary_color: '#FFFFFF',
-        logo_position: 'center',
-        background_image_url: '',
-        custom_css: '',
-      });
-    }
-
-    // Update only provided fields
-    Object.assign(customization, customizationData);
-
-    // Update profile reference
-    profile.checkout_customization = customization;
-    return await profile.save();
-  }
-
-  async getCheckoutCustomization(userId: string): Promise<BusinessProfile> {
-    const profile = await this.businessProfileModel.findOne({
-      user_id: userId,
-    });
-
     if (!profile) {
       throw new NotFoundException('Business profile not found');
     }
 
     if (!profile.checkout_customization) {
-      const defaultCustomization = new this.checkoutCustomizationModel({
-        business_id: profile._id,
-        primary_color: '#0066FF',
-        secondary_color: '#FFFFFF',
-        logo_position: 'center',
-        background_image_url: '',
-        custom_css: '',
+      profile.checkout_customization = new this.checkoutCustomizationModel({
+        primary_color: '#000000',
+        secondary_color: '#ffffff',
+        logo_position: 'top right',
+        background_image_url: 'some url',
+        custom_css: 'some css',
       });
-
-      profile.checkout_customization = defaultCustomization;
-      await profile.save();
-
-      return profile;
     }
 
-    return profile;
+    const allowedFields = [
+      'primary_color',
+      'secondary_color',
+      'logo_position',
+      'background_image_url',
+      'custom_css',
+    ] as const;
+
+    allowedFields.forEach((field) => {
+      const value = customization[field];
+      if (value !== undefined) {
+        profile.checkout_customization[field] = value;
+      }
+    });
+
+    return await profile.save();
   }
 }

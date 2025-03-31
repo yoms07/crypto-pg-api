@@ -2,7 +2,6 @@ import {
   Controller,
   Get,
   Put,
-  Post,
   Delete,
   Body,
   Param,
@@ -17,10 +16,8 @@ import { ApiResponse, ApiResponseBuilder } from '../common/response.common';
 import { ZodValidationPipe } from '../zod-validation';
 import { UpdateProfileDto, updateProfileDto } from './dto/update-profile.dto';
 import { UpdateWalletDto, updateWalletDto } from './dto/update-wallet.dto';
-import { AddApiKeyDto, addApiKeyDto } from './dto/add-api-key.dto';
 import { BusinessProfile } from './schemas/business-profile.schema';
-import { Wallet } from './schemas/wallet.schema';
-import { ApiKey } from './schemas/api-key.schema';
+import { ParseObjectIdPipe } from '@nestjs/mongoose';
 
 @Controller('business-profile')
 @UseGuards(AuthGuard)
@@ -30,11 +27,26 @@ export class BusinessProfileController {
   ) {}
 
   @Get()
-  async getProfile(
+  async getAllProfiles(
     @CurrentUser() user: User,
-  ): Promise<ApiResponse<BusinessProfile>> {
-    const profile = await this.businessProfileService.getBusinessProfile(
+  ): Promise<ApiResponse<BusinessProfile[]>> {
+    const profiles = await this.businessProfileService.getAllProfiles(
       user.id as string,
+    );
+    return ApiResponseBuilder.success(
+      profiles,
+      'Business profiles retrieved successfully',
+    );
+  }
+
+  @Get(':id')
+  async getProfileById(
+    @CurrentUser() user: User,
+    @Param('id', ParseObjectIdPipe) profileId: string,
+  ): Promise<ApiResponse<BusinessProfile>> {
+    const profile = await this.businessProfileService.getProfileById(
+      user.id as string,
+      profileId,
     );
     return ApiResponseBuilder.success(
       profile,
@@ -42,14 +54,16 @@ export class BusinessProfileController {
     );
   }
 
-  @Put()
+  @Put(':id')
   @UsePipes(new ZodValidationPipe(updateProfileDto))
   async updateProfile(
     @CurrentUser() user: User,
+    @Param('id') profileId: string,
     @Body() updateData: UpdateProfileDto,
   ): Promise<ApiResponse<BusinessProfile>> {
     const profile = await this.businessProfileService.updateProfile(
       user.id as string,
+      profileId,
       updateData,
     );
     return ApiResponseBuilder.success(
@@ -58,44 +72,42 @@ export class BusinessProfileController {
     );
   }
 
-  @Put('wallet')
+  @Put(':id/wallet')
   @UsePipes(new ZodValidationPipe(updateWalletDto))
   async updateWallet(
     @CurrentUser() user: User,
+    @Param('id') profileId: string,
     @Body() walletData: UpdateWalletDto,
-  ): Promise<ApiResponse<Wallet>> {
-    const wallet = await this.businessProfileService.updateWalletAddress(
+  ): Promise<ApiResponse<BusinessProfile>> {
+    const profile = await this.businessProfileService.updateWallet(
       user.id as string,
+      profileId,
       walletData,
     );
-    return ApiResponseBuilder.success(wallet, 'Wallet updated successfully');
+    return ApiResponseBuilder.success(profile, 'Wallet updated successfully');
   }
 
-  @Post('api-key')
-  @UsePipes(new ZodValidationPipe(addApiKeyDto))
-  async addApiKey(
+  @Put(':id/api-key')
+  async updateApiKey(
     @CurrentUser() user: User,
-    @Body() { name }: AddApiKeyDto,
-  ): Promise<ApiResponse<ApiKey>> {
-    const apiKey = await this.businessProfileService.addApiKey(
+    @Param('id') profileId: string,
+  ): Promise<ApiResponse<{ profile: BusinessProfile; key_value: string }>> {
+    const result = await this.businessProfileService.updateApiKey(
       user.id as string,
-      name,
+      profileId,
     );
-    return ApiResponseBuilder.success(apiKey, 'API key created successfully');
+    return ApiResponseBuilder.success(result, 'API key updated successfully');
   }
 
-  @Delete('api-key/:keyId')
+  @Delete(':id/api-key')
   async deleteApiKey(
     @CurrentUser() user: User,
-    @Param('keyId') keyId: string,
-  ): Promise<ApiResponse<{ success: boolean }>> {
-    const success = await this.businessProfileService.deleteApiKey(
+    @Param('id') profileId: string,
+  ): Promise<ApiResponse<BusinessProfile>> {
+    const profile = await this.businessProfileService.deleteApiKey(
       user.id as string,
-      keyId,
+      profileId,
     );
-    return ApiResponseBuilder.success(
-      { success },
-      'API key deleted successfully',
-    );
+    return ApiResponseBuilder.success(profile, 'API key deleted successfully');
   }
 }

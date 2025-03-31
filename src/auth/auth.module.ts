@@ -16,6 +16,7 @@ import { AuthService } from './service/auth.service';
 import { SessionService } from './service/session.service';
 import { MailModule } from 'src/mail/mail.module';
 import jwtConfig from 'src/config/jwt.config';
+import { AuthGuard } from './guards/auth.guard';
 
 @Module({
   imports: [
@@ -39,11 +40,12 @@ import jwtConfig from 'src/config/jwt.config';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('jwt.secret'),
+        secret: configService.get<string>('jwt.jwt_session_secret'),
       }),
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, SessionService],
+  providers: [AuthService, SessionService, AuthGuard],
+  exports: [AuthService, SessionService, AuthGuard],
 })
 export class AuthModule {}

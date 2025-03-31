@@ -1,19 +1,11 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Schema as MongooseSchema } from 'mongoose';
+import { Document } from 'mongoose';
 import { HydratedDocument } from 'mongoose';
-import { BusinessProfile } from './business-profile.schema';
 
 export type ApiKeyDocument = HydratedDocument<ApiKey>;
 
 @Schema({ timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } })
 export class ApiKey extends Document {
-  @Prop({
-    type: MongooseSchema.Types.ObjectId,
-    ref: 'BusinessProfile',
-    required: true,
-  })
-  business_id: BusinessProfile;
-
   @Prop({ required: true })
   key_hash: string;
 
@@ -21,7 +13,7 @@ export class ApiKey extends Document {
   is_active: boolean;
 
   @Prop({ type: Date, default: null })
-  last_used_at: Date;
+  last_used_at: Date | null;
 }
 
 export const ApiKeySchema = SchemaFactory.createForClass(ApiKey);
