@@ -1,26 +1,174 @@
-import { Injectable } from '@nestjs/common';
-import { CreatePaymentDto } from './dto/create-payment.dto';
-import { UpdatePaymentDto } from './dto/update-payment.dto';
+import {
+  Injectable,
+  BadRequestException,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { CreatePaymentLinkDto } from './dto/create-payment.dto';
+import { PaginationMetadata } from '@/common/pagination.common';
+import { PaymentLink } from './schemas/payment-link.schema';
+import { BusinessProfile } from '@/business-profile/schemas/business-profile.schema';
 
 @Injectable()
 export class PaymentService {
-  create(createPaymentDto: CreatePaymentDto) {
-    return 'This action adds a new payment';
+  private readonly logger = new Logger(PaymentService.name, {
+    timestamp: true,
+  });
+  constructor(
+    @InjectModel(PaymentLink.name)
+    private paymentLinkModel: Model<PaymentLink>,
+  ) {}
+
+  async create(
+    businessProfile: BusinessProfile,
+    createPaymentLinkDto: CreatePaymentLinkDto,
+  ): Promise<PaymentLink> {
+    // Check for unique external_id
+    const existingPayment = await this.paymentLinkModel.findOne({
+      business_profile_id: businessProfile._id,
+      external_id: createPaymentLinkDto.external_id,
+    });
+
+    if (existingPayment) {
+      throw new BadRequestException(
+        'External ID must be unique for this business profile',
+      );
+    }
+
+    // Validate URLs if provided
+    if (createPaymentLinkDto.success_redirect_url) {
+      try {
+        new URL(createPaymentLinkDto.success_redirect_url);
+      } catch (e) {
+        this.logger.error('Invalid success redirect URL', e);
+        throw new BadRequestException('Invalid success redirect URL');
+      }
+    }
+
+    if (createPaymentLinkDto.failure_redirect_url) {
+      try {
+        new URL(createPaymentLinkDto.failure_redirect_url);
+      } catch (e) {
+        this.logger.error('Invalid failure redirect URL', e);
+        throw new BadRequestException('Invalid failure redirect URL');
+      }
+    }
+
+    // Validate metadata if provided
+    if (createPaymentLinkDto.metadata) {
+      try {
+        const metadataStr = JSON.stringify(createPaymentLinkDto.metadata);
+        if (metadataStr.length > 500) {
+          throw new BadRequestException(
+            'Metadata length exceeds 500 characters',
+          );
+        }
+      } catch (e) {
+        this.logger.error('Invalid metadata format', e);
+        throw new BadRequestException('Invalid metadata format');
+      }
+    }
+
+    // Set expiration time (24 hours from now)
+    const expired_at = new Date();
+    expired_at.setHours(expired_at.getHours() + 24);
+
+    // Create payment link
+    const paymentLink = new this.paymentLinkModel({
+      ...createPaymentLinkDto,
+      business_profile_id: businessProfile._id,
+      status: 'pending',
+      expired_at,
+      pricing: {
+        local: {
+          amount: createPaymentLinkDto.pricing.amount,
+          currency: createPaymentLinkDto.pricing.currency,
+        },
+      },
+    });
+
+    return await paymentLink.save();
   }
 
-  findAll() {
-    return `This action returns all payment`;
+  async findAllByBusinessProfile(
+    businessProfile: BusinessProfile,
+    query: any,
+    paginationMetadata: PaginationMetadata,
+  ): Promise<{ data: PaymentLink[]; total: number }> {
+    const { currentPage: page, itemsPerPage: limit } = paginationMetadata;
+    const skip = (page - 1) * limit;
+
+    const filter = {
+      business_profile_id: businessProfile.id as string,
+      // ...(query.status && { status: query.status }),
+    };
+
+    const [data, total] = await Promise.all([
+      this.paymentLinkModel
+        .find(filter)
+        .sort({ created_at: -1 })
+        .skip(skip)
+        .limit(limit)
+        .exec(),
+      this.paymentLinkModel.countDocuments(filter),
+    ]);
+
+    return { data, total };
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} payment`;
+  async findByExternalId(
+    businessProfile: BusinessProfile,
+    externalId: string,
+  ): Promise<PaymentLink> {
+    const paymentLink = await this.paymentLinkModel.findOne({
+      business_profile_id: businessProfile.id,
+      external_id: externalId,
+    });
+
+    if (!paymentLink) {
+      throw new NotFoundException('Payment link not found');
+    }
+
+    return paymentLink;
   }
 
-  update(id: number, updatePaymentDto: UpdatePaymentDto) {
-    return `This action updates a #${id} payment`;
+  async findOne(
+    businessProfile: BusinessProfile,
+    id: string,
+  ): Promise<PaymentLink> {
+    const paymentLink = await this.paymentLinkModel.findOne({
+      _id: id,
+      business_profile_id: businessProfile.id,
+    });
+
+    if (!paymentLink) {
+      throw new NotFoundException('Payment link not found');
+    }
+
+    return paymentLink;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} payment`;
+  async markExpired(
+    businessProfile: BusinessProfile,
+    id: string,
+  ): Promise<PaymentLink> {
+    const paymentLink = await this.paymentLinkModel.findOne({
+      _id: id,
+      business_profile_id: businessProfile.id,
+    });
+    if (!paymentLink) {
+      throw new NotFoundException('Payment link not found');
+    }
+
+    if (paymentLink.status !== 'pending') {
+      throw new BadRequestException('Payment link is not in pending status');
+    }
+
+    paymentLink.status = 'expired';
+    paymentLink.expired_at = new Date();
+
+    return await paymentLink.save();
   }
 }
