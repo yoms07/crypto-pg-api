@@ -1,8 +1,8 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
 import { HydratedDocument } from 'mongoose';
-import { BusinessProfile } from './business-profile.schema';
 import { Transaction } from './transaction.schema';
+import { BusinessProfile } from '@/business-profile/schemas/business-profile.schema';
 
 export type WebhookLogDocument = HydratedDocument<WebhookLog>;
 

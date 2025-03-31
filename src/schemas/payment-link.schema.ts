@@ -1,7 +1,7 @@
+import { BusinessProfile } from '@/business-profile/schemas/business-profile.schema';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
 import { HydratedDocument } from 'mongoose';
-import { BusinessProfile } from './business-profile.schema';
 
 export type PaymentLinkDocument = HydratedDocument<PaymentLink>;
 

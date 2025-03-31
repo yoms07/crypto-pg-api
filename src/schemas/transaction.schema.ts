@@ -2,7 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
 import { HydratedDocument } from 'mongoose';
 import { PaymentLink } from './payment-link.schema';
-import { Wallet } from './wallet.schema';
+import { Wallet } from '../business-profile/schemas/wallet.schema';
 
 export type TransactionDocument = HydratedDocument<Transaction>;
 
