@@ -9,6 +9,9 @@ export class ApiKey extends Document {
   @Prop({ required: true })
   key_hash: string;
 
+  @Prop({ required: true })
+  encrypted_key: string;
+
   @Prop({ default: true })
   is_active: boolean;
 

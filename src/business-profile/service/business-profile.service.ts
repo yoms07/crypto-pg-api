@@ -6,18 +6,22 @@ import * as crypto from 'crypto';
 import { CheckoutCustomization } from '../schemas/checkout-customization.schema';
 import { ApiKey } from '../schemas/api-key.schema';
 import { Wallet } from '../schemas/wallet.schema';
+import { ConfigService } from '@nestjs/config';
+import { ApiKeyService } from './api-key.service';
 
 @Injectable()
 export class BusinessProfileService {
   constructor(
     @InjectModel(BusinessProfile.name)
     private businessProfileModel: Model<BusinessProfile>,
+    private configService: ConfigService,
     @InjectModel(CheckoutCustomization.name)
     private checkoutCustomizationModel: Model<CheckoutCustomization>,
     @InjectModel(ApiKey.name)
     private apiKeyModel: Model<ApiKey>,
     @InjectModel(Wallet.name)
     private walletModel: Model<Wallet>,
+    private apiKeyService: ApiKeyService,
   ) {}
 
   async createDefaultProfile(userId: string): Promise<BusinessProfile> {
@@ -132,79 +136,47 @@ export class BusinessProfileService {
       throw new NotFoundException('Business profile not found');
     }
 
-    const keyValue = crypto.randomBytes(32).toString('hex');
-    const keyHash = crypto.createHash('sha256').update(keyValue).digest('hex');
+    const { keyValue, keyHash, encryptedKey } =
+      this.apiKeyService.generateApiKey();
+
     if (!profile.api_key) {
       profile.api_key = new this.apiKeyModel({
         key_hash: keyHash,
+        encrypted_key: encryptedKey,
         is_active: true,
         last_used_at: null,
       });
     }
+
     profile.api_key.key_hash = keyHash;
+    profile.api_key.encrypted_key = encryptedKey;
     profile.api_key.is_active = true;
     profile.api_key.last_used_at = null;
+
     const savedProfile = await profile.save();
     return {
       profile: savedProfile,
-      key_value: keyValue, // Return the actual key value for one-time display
+      key_value: keyValue,
     };
   }
 
-  async deleteApiKey(
-    userId: string,
-    profileId: string,
-  ): Promise<BusinessProfile> {
+  async getBusinessProfileByApiKey(apiKey: string): Promise<BusinessProfile> {
+    const keyHash = this.apiKeyService.hashApiKey(apiKey);
     const profile = await this.businessProfileModel.findOne({
-      _id: profileId,
-      user_id: userId,
+      'api_key.key_hash': keyHash,
+      'api_key.is_active': true,
     });
-    if (!profile) {
+
+    if (!profile || !profile.api_key?.encrypted_key) {
       throw new NotFoundException('Business profile not found');
     }
 
-    profile.api_key = null;
-    return await profile.save();
-  }
-
-  async updateCheckoutCustomization(
-    userId: string,
-    profileId: string,
-    customization: Partial<CheckoutCustomization>,
-  ): Promise<BusinessProfile> {
-    const profile = await this.businessProfileModel.findOne({
-      _id: profileId,
-      user_id: userId,
-    });
-    if (!profile) {
+    if (
+      !this.apiKeyService.verifyApiKey(apiKey, profile.api_key.encrypted_key)
+    ) {
       throw new NotFoundException('Business profile not found');
     }
 
-    if (!profile.checkout_customization) {
-      profile.checkout_customization = new this.checkoutCustomizationModel({
-        primary_color: '#000000',
-        secondary_color: '#ffffff',
-        logo_position: 'top right',
-        background_image_url: 'some url',
-        custom_css: 'some css',
-      });
-    }
-
-    const allowedFields = [
-      'primary_color',
-      'secondary_color',
-      'logo_position',
-      'background_image_url',
-      'custom_css',
-    ] as const;
-
-    allowedFields.forEach((field) => {
-      const value = customization[field];
-      if (value !== undefined) {
-        profile.checkout_customization[field] = value;
-      }
-    });
-
-    return await profile.save();
+    return profile;
   }
 }

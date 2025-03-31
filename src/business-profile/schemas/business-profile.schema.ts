@@ -40,6 +40,11 @@ export class BusinessProfile extends Document {
 
   @Prop(CheckoutCustomization)
   checkout_customization: CheckoutCustomization;
+
+  @Prop()
+  created_at: Date;
+  @Prop()
+  updated_at: Date;
 }
 
 export type BusinessProfileDocumentOverride = {

@@ -13,6 +13,7 @@ import {
   CheckoutCustomizationSchema,
 } from './schemas/checkout-customization.schema';
 import { AuthModule } from '@/auth/auth.module';
+import { ApiKeyService } from './service/api-key.service';
 
 @Module({
   imports: [
@@ -25,6 +26,6 @@ import { AuthModule } from '@/auth/auth.module';
     AuthModule,
   ],
   controllers: [BusinessProfileController],
-  providers: [BusinessProfileService],
+  providers: [BusinessProfileService, ApiKeyService],
 })
 export class BusinessProfileModule {}
