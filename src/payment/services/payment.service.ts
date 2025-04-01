@@ -6,10 +6,13 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { CreatePaymentLinkDto } from './dto/create-payment.dto';
+import { CreatePaymentLinkDto } from '../dto/create-payment.dto';
 import { PaginationMetadata } from '@/common/pagination.common';
-import { PaymentLink } from './schemas/payment-link.schema';
+import { PaymentLink } from '../schemas/payment-link.schema';
 import { BusinessProfile } from '@/business-profile/schemas/business-profile.schema';
+import { Web3Service } from './web3.service';
+import { v4 as uuidv4 } from 'uuid';
+import { PaymentIntent } from '../entities/payment-intent.entity';
 
 @Injectable()
 export class PaymentService {
@@ -19,7 +22,13 @@ export class PaymentService {
   constructor(
     @InjectModel(PaymentLink.name)
     private paymentLinkModel: Model<PaymentLink>,
+    private web3Service: Web3Service,
   ) {}
+
+  private genenratePaymentId(): string {
+    // Generate a random 6-digit number
+    return uuidv4();
+  }
 
   async create(
     businessProfile: BusinessProfile,
@@ -79,6 +88,7 @@ export class PaymentService {
     const paymentLink = new this.paymentLinkModel({
       ...createPaymentLinkDto,
       business_profile_id: businessProfile._id,
+      payment_id: this.genenratePaymentId(),
       status: 'pending',
       expired_at,
       pricing: {
@@ -90,6 +100,38 @@ export class PaymentService {
     });
 
     return await paymentLink.save();
+  }
+
+  async initiatePayment(
+    paymentId: string,
+    sender: string,
+  ): Promise<PaymentIntent> {
+    const paymentLink = await this.paymentLinkModel.findById(paymentId);
+    if (!paymentLink) {
+      throw new NotFoundException('Payment link not found');
+    }
+    if (
+      paymentLink.status !== 'pending' &&
+      paymentLink.status !== 'processing'
+    ) {
+      throw new BadRequestException(
+        'Payment link is not in pending/processing status',
+      );
+    }
+    const paymentIntent = paymentLink.blockchain_data.transfer_intent[sender];
+    if (paymentIntent && paymentIntent.deadline > Date.now() / 1000) {
+      return paymentIntent;
+    }
+
+    // Construct payment intent
+    const paymentIntentData = this.web3Service.constructPaymentIntent(
+      paymentLink,
+      sender,
+    );
+    paymentLink.blockchain_data.transfer_intent[sender] = paymentIntentData;
+    paymentLink.status = 'processing';
+    await paymentLink.save();
+    return paymentIntentData;
   }
 
   async findAllByBusinessProfile(

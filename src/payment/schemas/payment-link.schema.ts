@@ -1,18 +1,70 @@
 import { BusinessProfile } from '@/business-profile/schemas/business-profile.schema';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Schema as MongooseSchema } from 'mongoose';
+import mongoose, { Document, Schema as MongooseSchema } from 'mongoose';
 import { HydratedDocument } from 'mongoose';
 import { Customer, CustomerSchema } from './customer.schema';
 
 export type PaymentLinkDocument = HydratedDocument<PaymentLink>;
 
 @Schema()
+class PaymentIntent {
+  @Prop({ required: true })
+  recipientAmount: string;
+
+  @Prop({ required: true })
+  deadline: number;
+
+  @Prop({ required: true })
+  recipient: string;
+
+  @Prop({ required: true })
+  recipientCurrency: string;
+
+  @Prop({ required: true })
+  refundDestination: string;
+
+  @Prop({ required: true })
+  feeAmount: string;
+
+  @Prop({ required: true })
+  id: string;
+
+  @Prop({ required: true })
+  operator: string;
+
+  @Prop({ required: true })
+  signature: string;
+
+  @Prop({ required: true })
+  prefix: string;
+}
+
+@Schema()
+class Asset {
+  @Prop({
+    type: String,
+    enum: ['native', 'token'],
+    default: 'native',
+  })
+  type: string;
+
+  @Prop({ required: true })
+  address: string;
+
+  @Prop({ required: true })
+  chainId: number;
+
+  @Prop()
+  decimals: number;
+}
+
+@Schema()
 class PricingAmount {
   @Prop({ required: true })
   amount: string;
 
-  @Prop({ required: true })
-  currency: string;
+  @Prop(Asset)
+  asset: Asset;
 }
 
 @Schema()
@@ -39,7 +91,7 @@ class BlockchainMetadata {
 @Schema()
 class BlockchainData {
   @Prop({ type: MongooseSchema.Types.Mixed })
-  transfer_intent: Record<string, any>;
+  transfer_intent: Record<string, PaymentIntent>;
 
   @Prop({ type: BlockchainMetadata })
   metadata: BlockchainMetadata;
@@ -70,6 +122,9 @@ class Item {
 export class PaymentLink extends Document {
   @Prop({ required: true })
   external_id: string;
+
+  @Prop({ type: mongoose.Schema.Types.UUID })
+  payment_id: string;
 
   @Prop()
   description: string;

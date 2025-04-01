@@ -9,14 +9,14 @@ import {
   UsePipes,
   Put,
 } from '@nestjs/common';
-import { PaymentService } from './payment.service';
-import { ValidApiKeyGuard } from '@/business-profile/guards/api-key.guard';
+import { PaymentService } from '../services/payment.service';
+import { AuthGuard } from '@/auth/guards/auth.guard';
 import { CurrentBusinessProfile } from '@/business-profile/decorators/current-business-profile.decorator';
 import { BusinessProfile } from '@/business-profile/schemas/business-profile.schema';
 import {
   CreatePaymentLinkDto,
   createPaymentLinkSchema,
-} from './dto/create-payment.dto';
+} from '../dto/create-payment.dto';
 import { ApiResponse, ApiResponseBuilder } from '@/common/response.common';
 import { ZodValidationPipe } from '@/zod-validation';
 import {
@@ -24,10 +24,11 @@ import {
   paginationSchema,
   toPaginationMetadata,
 } from '@/common/pagination.common';
+import { BusinessProfileGuard } from '@/business-profile/guards/business-profile-param.guard';
 
-@Controller('/api/payment')
-@UseGuards(ValidApiKeyGuard)
-export class PaymentApiController {
+@Controller('/payment/:businessProfileId')
+@UseGuards(AuthGuard, BusinessProfileGuard)
+export class PaymentController {
   constructor(private readonly paymentService: PaymentService) {}
 
   @Post()
@@ -85,21 +86,6 @@ export class PaymentApiController {
     @Param('id') id: string,
   ): Promise<ApiResponse<any>> {
     const paymentLink = await this.paymentService.findOne(businessProfile, id);
-    return ApiResponseBuilder.success(
-      paymentLink,
-      'Payment link retrieved successfully',
-    );
-  }
-
-  @Get('external/:externalId')
-  async findByExternalId(
-    @CurrentBusinessProfile() businessProfile: BusinessProfile,
-    @Param('externalId') externalId: string,
-  ): Promise<ApiResponse<any>> {
-    const paymentLink = await this.paymentService.findByExternalId(
-      businessProfile,
-      externalId,
-    );
     return ApiResponseBuilder.success(
       paymentLink,
       'Payment link retrieved successfully',
