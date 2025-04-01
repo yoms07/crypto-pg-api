@@ -6,5 +6,6 @@ declare module 'express' {
   interface AppRequest extends Request {
     session?: Session;
     user?: User;
+    businessProfile?: BusinessProfile;
   }
 }
