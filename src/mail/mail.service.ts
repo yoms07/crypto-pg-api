@@ -40,5 +40,24 @@ export class MailService {
     this.logger.log(
       `Sending verification email to ${email}:${name} with token ${otpCode}`,
     ); // Add this line for loggin
+    this.mailerService
+      .sendMail({
+        to: email,
+        subject: 'Lisk PG - Verify your email',
+        template: 'otp-mail',
+        context: {
+          name,
+          otpCode,
+        },
+      })
+      .then(() => {
+        this.logger.log(`Verification email sent to ${email}`); // Add this line for loggin
+      })
+      .catch((error) => {
+        this.logger.error(
+          `Failed to send verification email to ${email}`,
+          error,
+        ); // Add this line for loggin
+      });
   }
 }
