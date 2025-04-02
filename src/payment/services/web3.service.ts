@@ -11,11 +11,14 @@ export class Web3Service {
     @Inject(web3Config.KEY)
     private config: ConfigType<typeof web3Config>,
   ) {}
-  constructPaymentIntent(
+  async constructPaymentIntent(
     paymentLink: PaymentLink,
     sender: string,
-  ): PaymentIntent {
-    let amount = BigInt(paymentLink.pricing.local.amount);
+  ): Promise<PaymentIntent> {
+    let amount = ethers.parseUnits(
+      paymentLink.pricing.local.amount,
+      paymentLink.pricing.local.asset.decimals,
+    );
     if (paymentLink.pricing.local.asset.type === 'native') {
       amount = ethers.parseEther(amount.toString());
     } else if (paymentLink.pricing.local.asset.type === 'token') {
@@ -30,12 +33,15 @@ export class Web3Service {
       recipientCurrency: paymentLink.pricing.local.asset.address,
       refundDestination: sender,
       feeAmount: '0',
-      id: paymentLink.payment_id.replaceAll('-', ''),
+      id: '0x' + paymentLink.payment_id.replaceAll('-', ''),
       operator: this.config.operator_address,
-      deadline: paymentLink.expired_at.getTime() / 1000,
+      deadline: Math.floor(paymentLink.expired_at.getTime() / 1000),
       signature: '',
       prefix: '',
     };
+
+    const signature = await this.signPaymentIntent(intent, sender);
+    intent.signature = signature.signature;
 
     return intent;
   }
@@ -62,7 +68,7 @@ export class Web3Service {
         intent.recipientCurrency,
         intent.refundDestination,
         intent.feeAmount,
-        intent.id,
+        '0x' + intent.id,
         intent.operator,
         this.config.pg_chain_id,
         sender,

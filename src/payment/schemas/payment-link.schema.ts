@@ -90,7 +90,7 @@ class BlockchainMetadata {
 
 @Schema({ _id: false })
 class BlockchainData {
-  @Prop({ type: MongooseSchema.Types.Mixed })
+  @Prop({ type: MongooseSchema.Types.Mixed, default: {} })
   transfer_intent: Record<string, PaymentIntent>;
 
   @Prop({ type: BlockchainMetadata })

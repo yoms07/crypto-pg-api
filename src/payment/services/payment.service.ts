@@ -99,23 +99,37 @@ export class PaymentService {
           amount: createPaymentLinkDto.pricing.amount,
           currency: createPaymentLinkDto.pricing.currency,
           asset: {
-            address: '0x18Bc5bcC660cf2B9cE3cd51a404aFe1a0cBD3C22', // TODO: add idrx address
+            address: '0x18Bc5bcC660cf2B9cE3cd51a404aFe1a0cBD3C22',
             chainId: 1135,
             decimals: 2,
             type: 'token',
           },
         },
       },
+      support_email: businessProfile.contact_email,
+      blockchain_data: {
+        transfer_intent: {},
+        success_event: null,
+        failure_event: null,
+      },
+      items: [],
     });
 
-    return await paymentLink.save();
+    this.logger.debug('Creating payment link with data:', paymentLink); // Add debug log
+    const saved = await paymentLink.save();
+    this.logger.debug('Saved payment link:', saved); // Add debug log
+    return saved;
   }
 
   async initiatePayment(
+    businessProfile: BusinessProfile,
     paymentId: string,
     sender: string,
   ): Promise<PaymentIntent> {
-    const paymentLink = await this.paymentLinkModel.findById(paymentId);
+    const paymentLink = await this.paymentLinkModel.findOne({
+      business_profile_id: businessProfile._id,
+      payment_id: paymentId,
+    });
     if (!paymentLink) {
       throw new NotFoundException('Payment link not found');
     }
@@ -127,13 +141,23 @@ export class PaymentService {
         'Payment link is not in pending/processing status',
       );
     }
+    if (
+      paymentLink.blockchain_data.transfer_intent &&
+      sender in paymentLink.blockchain_data.transfer_intent
+    ) {
+      const paymentIntent = paymentLink.blockchain_data.transfer_intent[sender];
+      if (paymentIntent && paymentIntent.deadline > Date.now() / 1000) {
+        return paymentIntent;
+      }
+    }
     const paymentIntent = paymentLink.blockchain_data.transfer_intent[sender];
     if (paymentIntent && paymentIntent.deadline > Date.now() / 1000) {
       return paymentIntent;
     }
 
+    paymentLink.business_profile_id = businessProfile;
     // Construct payment intent
-    const paymentIntentData = this.web3Service.constructPaymentIntent(
+    const paymentIntentData = await this.web3Service.constructPaymentIntent(
       paymentLink,
       sender,
     );
@@ -190,7 +214,7 @@ export class PaymentService {
     id: string,
   ): Promise<PaymentLink> {
     const paymentLink = await this.paymentLinkModel.findOne({
-      _id: id,
+      payment_id: id,
       business_profile_id: businessProfile.id,
     });
 
