@@ -6,7 +6,7 @@ import { Customer, CustomerSchema } from './customer.schema';
 
 export type PaymentLinkDocument = HydratedDocument<PaymentLink>;
 
-@Schema()
+@Schema({ _id: false })
 class PaymentIntent {
   @Prop({ required: true })
   recipientAmount: string;
@@ -39,7 +39,7 @@ class PaymentIntent {
   prefix: string;
 }
 
-@Schema()
+@Schema({ _id: false })
 class Asset {
   @Prop({
     type: String,
@@ -58,7 +58,7 @@ class Asset {
   decimals: number;
 }
 
-@Schema()
+@Schema({ _id: false })
 class PricingAmount {
   @Prop({ required: true })
   amount: string;
@@ -67,7 +67,7 @@ class PricingAmount {
   asset: Asset;
 }
 
-@Schema()
+@Schema({ _id: false })
 class Pricing {
   @Prop({ type: PricingAmount, required: true })
   local: PricingAmount;
@@ -76,7 +76,7 @@ class Pricing {
   settled: PricingAmount;
 }
 
-@Schema()
+@Schema({ _id: false })
 class BlockchainMetadata {
   @Prop({ required: true })
   chain_id: string;
@@ -88,7 +88,7 @@ class BlockchainMetadata {
   sender: string;
 }
 
-@Schema()
+@Schema({ _id: false })
 class BlockchainData {
   @Prop({ type: MongooseSchema.Types.Mixed })
   transfer_intent: Record<string, PaymentIntent>;
@@ -103,7 +103,7 @@ class BlockchainData {
   failure_event: Record<string, any>;
 }
 
-@Schema()
+@Schema({ _id: false })
 class Item {
   @Prop({ required: true })
   name: string;
@@ -175,6 +175,11 @@ export class PaymentLink extends Document {
 
   @Prop({ type: Date, required: true })
   expired_at: Date;
+
+  @Prop({ type: Date })
+  created_at: Date;
+  @Prop({ type: Date })
+  updated_at: Date;
 }
 
 export const PaymentLinkSchema = SchemaFactory.createForClass(PaymentLink);

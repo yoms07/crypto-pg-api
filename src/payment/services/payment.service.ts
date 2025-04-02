@@ -98,6 +98,12 @@ export class PaymentService {
         local: {
           amount: createPaymentLinkDto.pricing.amount,
           currency: createPaymentLinkDto.pricing.currency,
+          asset: {
+            address: '0x18Bc5bcC660cf2B9cE3cd51a404aFe1a0cBD3C22', // TODO: add idrx address
+            chainId: 1135,
+            decimals: 2,
+            type: 'token',
+          },
         },
       },
     });

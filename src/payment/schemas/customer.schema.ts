@@ -1,8 +1,13 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+
+enum CustomerSource {
+  BUSINESS = 'business',
+  CUSTOMER = 'customer',
+}
 @Schema()
 class Customer {
   @Prop({ required: true, enum: ['business', 'customer'] })
-  source: string;
+  source: CustomerSource;
 
   @Prop()
   name: string;

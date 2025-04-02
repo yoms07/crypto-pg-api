@@ -6,7 +6,6 @@ import {
   Param,
   Query,
   UseGuards,
-  UsePipes,
   Put,
 } from '@nestjs/common';
 import { PaymentService } from '../services/payment.service';
@@ -25,24 +24,50 @@ import {
   toPaginationMetadata,
 } from '@/common/pagination.common';
 import { BusinessProfileGuard } from '@/business-profile/guards/business-profile-param.guard';
+import { PaymentLink } from '../schemas/payment-link.schema';
+import { PaymentLinkDto } from '../dto/payment-link.dto';
 
 @Controller('/payment/:businessProfileId')
 @UseGuards(AuthGuard, BusinessProfileGuard)
 export class PaymentController {
   constructor(private readonly paymentService: PaymentService) {}
 
+  private transformToDto(paymentLink: PaymentLink): PaymentLinkDto {
+    return {
+      id: paymentLink.id as string,
+      business_profile_id: paymentLink.business_profile_id._id as string,
+      payment_id: paymentLink.payment_id,
+      external_id: paymentLink.external_id,
+      status: paymentLink.status,
+      success_redirect_url: paymentLink.success_redirect_url,
+      failure_redirect_url: paymentLink.failure_redirect_url,
+      customer: paymentLink.customer,
+      metadata: paymentLink.metadata,
+      pricing: {
+        local: {
+          amount: paymentLink.pricing.local.amount,
+          asset: paymentLink.pricing.local.asset,
+        },
+      },
+      items: paymentLink.items || [],
+      expired_at: paymentLink.expired_at,
+      created_at: paymentLink.created_at,
+      updated_at: paymentLink.updated_at,
+    };
+  }
+
   @Post()
-  @UsePipes(new ZodValidationPipe(createPaymentLinkSchema))
   async create(
     @CurrentBusinessProfile() businessProfile: BusinessProfile,
-    @Body() createPaymentDto: CreatePaymentLinkDto,
-  ): Promise<ApiResponse<any>> {
+    @Body(new ZodValidationPipe(createPaymentLinkSchema))
+    createPaymentDto: CreatePaymentLinkDto,
+  ): Promise<ApiResponse<PaymentLinkDto>> {
     const paymentLink = await this.paymentService.create(
       businessProfile,
       createPaymentDto,
     );
     return ApiResponseBuilder.success(
-      paymentLink,
+      this.transformToDto(paymentLink),
       'Payment link created successfully',
     );
   }
@@ -51,7 +76,7 @@ export class PaymentController {
   async findAll(
     @CurrentBusinessProfile() businessProfile: BusinessProfile,
     @Query(new ZodValidationPipe(paginationSchema)) query: PaginationQuery,
-  ): Promise<ApiResponse<any>> {
+  ): Promise<ApiResponse<{ data: PaymentLinkDto[]; pagination: any }>> {
     const paginationMetadata = toPaginationMetadata(query);
     const { data, total } = await this.paymentService.findAllByBusinessProfile(
       businessProfile,
@@ -60,7 +85,10 @@ export class PaymentController {
     );
 
     return ApiResponseBuilder.success(
-      { data, pagination: { ...paginationMetadata, total } },
+      {
+        data: data.map((link) => this.transformToDto(link)),
+        pagination: { ...paginationMetadata, total },
+      },
       'Payment links retrieved successfully',
     );
   }
@@ -69,13 +97,13 @@ export class PaymentController {
   async markExpired(
     @CurrentBusinessProfile() businessProfile: BusinessProfile,
     @Param('id') id: string,
-  ): Promise<ApiResponse<any>> {
+  ): Promise<ApiResponse<PaymentLinkDto>> {
     const paymentLink = await this.paymentService.markExpired(
       businessProfile,
       id,
     );
     return ApiResponseBuilder.success(
-      paymentLink,
+      this.transformToDto(paymentLink),
       'Payment link marked as expired',
     );
   }
@@ -84,10 +112,10 @@ export class PaymentController {
   async findOne(
     @CurrentBusinessProfile() businessProfile: BusinessProfile,
     @Param('id') id: string,
-  ): Promise<ApiResponse<any>> {
+  ): Promise<ApiResponse<PaymentLinkDto>> {
     const paymentLink = await this.paymentService.findOne(businessProfile, id);
     return ApiResponseBuilder.success(
-      paymentLink,
+      this.transformToDto(paymentLink),
       'Payment link retrieved successfully',
     );
   }
