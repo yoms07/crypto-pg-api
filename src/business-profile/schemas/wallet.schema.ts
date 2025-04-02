@@ -4,7 +4,7 @@ import { HydratedDocument } from 'mongoose';
 
 export type WalletDocument = HydratedDocument<Wallet>;
 
-@Schema({ id: false })
+@Schema({ _id: false })
 export class Wallet extends Document {
   @Prop({ required: true })
   wallet_address: string;

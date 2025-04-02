@@ -14,7 +14,8 @@ export class ZodValidationPipe implements PipeTransform {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const parsedValue = this.schema.parse(value);
       return parsedValue;
-    } catch {
+    } catch (e) {
+      console.error(e);
       throw new BadRequestException('Validation failed');
     }
   }
