@@ -13,6 +13,8 @@ import { BusinessProfile } from '@/business-profile/schemas/business-profile.sch
 import { Web3Service } from './web3.service';
 import { v4 as uuidv4 } from 'uuid';
 import { PaymentIntent } from '../entities/payment-intent.entity';
+import { formatUUID } from '@/utils/uuid';
+import { OutboundWebhookService } from '@/outbound-webhook/outbound-webhook.service';
 
 @Injectable()
 export class PaymentService {
@@ -23,6 +25,7 @@ export class PaymentService {
     @InjectModel(PaymentLink.name)
     private paymentLinkModel: Model<PaymentLink>,
     private web3Service: Web3Service,
+    private outboundWebhookService: OutboundWebhookService,
   ) {}
 
   private genenratePaymentId(): string {
@@ -212,5 +215,65 @@ export class PaymentService {
     paymentLink.expired_at = new Date();
 
     return await paymentLink.save();
+  }
+
+  async markPaid(paymentIntent: PaymentIntent): Promise<void> {
+    const id = formatUUID(paymentIntent.id);
+    const paymentLink = await this.paymentLinkModel
+      .findOne({ payment_id: id })
+      .populate('business_profile_id');
+    if (!paymentLink) {
+      throw new NotFoundException('Payment link not found');
+    }
+
+    if (paymentLink.status !== 'processing') {
+      throw new BadRequestException('Payment link is not in processing status');
+    }
+
+    paymentLink.status = 'completed';
+    paymentLink.success_at = new Date();
+    paymentLink.blockchain_data.success_event = paymentIntent;
+
+    await paymentLink.save();
+
+    // Send webhook
+    this.outboundWebhookService
+      .sendPaymentSuccessWebhook(
+        paymentLink.business_profile_id,
+        paymentLink,
+        paymentIntent.signature,
+      )
+      .then(() => {})
+      .catch(() => {});
+  }
+
+  async markFailed(paymentIntent: PaymentIntent): Promise<void> {
+    const id = formatUUID(paymentIntent.id);
+    const paymentLink = await this.paymentLinkModel
+      .findOne({ payment_id: id })
+      .populate('business_profile_id');
+    if (!paymentLink) {
+      throw new NotFoundException('Payment link not found');
+    }
+
+    if (paymentLink.status !== 'processing') {
+      throw new BadRequestException('Payment link is not in processing status');
+    }
+
+    paymentLink.status = 'failed';
+    paymentLink.failed_at = new Date();
+    paymentLink.blockchain_data.failure_event = paymentIntent;
+
+    await paymentLink.save();
+
+    // Send webhook
+    this.outboundWebhookService
+      .sendPaymentFailedWebhook(
+        paymentLink.business_profile_id,
+        paymentLink,
+        'Transaction failed',
+      )
+      .then(() => {})
+      .catch(() => {});
   }
 }

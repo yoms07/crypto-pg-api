@@ -1,15 +1,18 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import * as crypto from 'crypto';
-import { ConfigService } from '@nestjs/config';
+import { ConfigType } from '@nestjs/config';
+import secretConfig from '@/config/secret.config';
 
 @Injectable()
 export class ApiKeyService {
   private readonly encryptionKey: Buffer;
   private readonly logger = new Logger(ApiKeyService.name);
 
-  constructor(private configService: ConfigService) {
-    const secretKey = this.configService.get<string>('API_KEY_SECRET')!;
-    this.encryptionKey = crypto.scryptSync(secretKey, 'salt', 32);
+  constructor(
+    @Inject(secretConfig.KEY)
+    private config: ConfigType<typeof secretConfig>,
+  ) {
+    this.encryptionKey = crypto.scryptSync(config.api_key_secret, 'salt', 32);
   }
 
   hashApiKey(apiKey: string): string {

@@ -1,14 +1,16 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import * as ethers from 'ethers';
 import { PaymentIntent } from '../entities/payment-intent.entity';
 import { PaymentLink } from '../schemas/payment-link.schema';
+import { ConfigType } from '@nestjs/config';
+import web3Config from 'src/config/web3.config';
 
 @Injectable()
 export class Web3Service {
-  private contractAddress = '0x';
-  private signerAddress = '0x';
-  private signerPrivateKey = '0x';
-  private chainId = 1;
+  constructor(
+    @Inject(web3Config.KEY)
+    private config: ConfigType<typeof web3Config>,
+  ) {}
   constructPaymentIntent(
     paymentLink: PaymentLink,
     sender: string,
@@ -22,7 +24,6 @@ export class Web3Service {
         paymentLink.pricing.local.asset.decimals,
       );
     }
-
     const intent: PaymentIntent = {
       recipient: paymentLink.business_profile_id.wallet!.wallet_address,
       recipientAmount: amount.toString(),
@@ -30,7 +31,7 @@ export class Web3Service {
       refundDestination: sender,
       feeAmount: '0',
       id: paymentLink.payment_id.replaceAll('-', ''),
-      operator: this.signerAddress,
+      operator: this.config.operator_address,
       deadline: paymentLink.expired_at.getTime() / 1000,
       signature: '',
       prefix: '',
@@ -63,9 +64,9 @@ export class Web3Service {
         intent.feeAmount,
         intent.id,
         intent.operator,
-        this.chainId,
+        this.config.pg_chain_id,
         sender,
-        this.contractAddress,
+        this.config.pg_contract_address,
       ],
     );
 
@@ -79,7 +80,7 @@ export class Web3Service {
     intent: PaymentIntent;
   }> {
     const hash = this.getPaymentIntentHash(intent, sender);
-    const wallet = new ethers.Wallet(this.signerPrivateKey);
+    const wallet = new ethers.Wallet(this.config.operator_private_key);
     const signature = await wallet.signMessage(ethers.getBytes(hash));
 
     return {

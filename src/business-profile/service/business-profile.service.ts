@@ -3,10 +3,8 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { BusinessProfile } from '../schemas/business-profile.schema';
 import * as crypto from 'crypto';
-import { CheckoutCustomization } from '../schemas/checkout-customization.schema';
 import { ApiKey } from '../schemas/api-key.schema';
 import { Wallet } from '../schemas/wallet.schema';
-import { ConfigService } from '@nestjs/config';
 import { ApiKeyService } from './api-key.service';
 
 @Injectable()
@@ -14,9 +12,6 @@ export class BusinessProfileService {
   constructor(
     @InjectModel(BusinessProfile.name)
     private businessProfileModel: Model<BusinessProfile>,
-    private configService: ConfigService,
-    @InjectModel(CheckoutCustomization.name)
-    private checkoutCustomizationModel: Model<CheckoutCustomization>,
     @InjectModel(ApiKey.name)
     private apiKeyModel: Model<ApiKey>,
     @InjectModel(Wallet.name)

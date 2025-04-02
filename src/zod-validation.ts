@@ -8,11 +8,13 @@ import { ZodSchema } from 'zod';
 export class ZodValidationPipe implements PipeTransform {
   constructor(private schema: ZodSchema) {}
 
-  transform(value: unknown, metadata: ArgumentMetadata) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  transform(value: any, _: ArgumentMetadata): any {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const parsedValue = this.schema.parse(value);
       return parsedValue;
-    } catch (error) {
+    } catch {
       throw new BadRequestException('Validation failed');
     }
   }

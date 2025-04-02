@@ -9,6 +9,7 @@ import * as winston from 'winston';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
+    rawBody: true,
     abortOnError: false,
     logger: WinstonModule.createLogger({
       transports: [

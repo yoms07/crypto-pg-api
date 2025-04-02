@@ -14,6 +14,9 @@ import { WinstonModule, utilities } from 'nest-winston';
 import * as winston from 'winston';
 import { AppLoggerMiddleware } from './common/middlewares/logging.middleware';
 import { PaymentModule } from './payment/payment.module';
+import { ProductsModule } from './products/products.module';
+import { OutboundWebhookModule } from './outbound-webhook/outbound-webhook.module';
+import { InboundWebhookModule } from './inbound-webhook/inbound-webhook.module';
 
 @Module({
   imports: [
@@ -73,6 +76,9 @@ import { PaymentModule } from './payment/payment.module';
     BusinessProfileModule,
     MailModule,
     PaymentModule,
+    ProductsModule,
+    OutboundWebhookModule,
+    InboundWebhookModule,
   ],
   controllers: [AppController],
   providers: [AppService],

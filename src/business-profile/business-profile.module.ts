@@ -14,9 +14,12 @@ import {
 } from './schemas/checkout-customization.schema';
 import { AuthModule } from '@/auth/auth.module';
 import { ApiKeyService } from './service/api-key.service';
+import { ConfigModule } from '@nestjs/config';
+import secretConfig from '@/config/secret.config';
 
 @Module({
   imports: [
+    ConfigModule.forFeature(secretConfig),
     MongooseModule.forFeature([
       { name: BusinessProfile.name, schema: BusinessProfileSchema },
       { name: ApiKey.name, schema: ApiKeySchema },
@@ -27,5 +30,6 @@ import { ApiKeyService } from './service/api-key.service';
   ],
   controllers: [BusinessProfileController],
   providers: [BusinessProfileService, ApiKeyService],
+  exports: [BusinessProfileService], // Export the service for use in other modules, e.g., Ap
 })
 export class BusinessProfileModule {}
