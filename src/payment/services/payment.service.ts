@@ -130,6 +130,7 @@ export class PaymentService {
       business_profile_id: businessProfile._id,
       payment_id: paymentId,
     });
+    console.log(paymentLink?.blockchain_data.transfer_intent);
     if (!paymentLink) {
       throw new NotFoundException('Payment link not found');
     }
@@ -145,14 +146,11 @@ export class PaymentService {
       paymentLink.blockchain_data.transfer_intent &&
       sender in paymentLink.blockchain_data.transfer_intent
     ) {
+      console.log('sampe sini');
       const paymentIntent = paymentLink.blockchain_data.transfer_intent[sender];
       if (paymentIntent && paymentIntent.deadline > Date.now() / 1000) {
         return paymentIntent;
       }
-    }
-    const paymentIntent = paymentLink.blockchain_data.transfer_intent[sender];
-    if (paymentIntent && paymentIntent.deadline > Date.now() / 1000) {
-      return paymentIntent;
     }
 
     paymentLink.business_profile_id = businessProfile;
@@ -305,5 +303,20 @@ export class PaymentService {
       )
       .then(() => {})
       .catch(() => {});
+  }
+
+  async findOnePublic(id: string): Promise<PaymentLink> {
+    const paymentLink = await this.paymentLinkModel
+      .findOne({ payment_id: id })
+      .populate({
+        path: 'business_profile_id',
+        select: 'checkout_customization _id',
+      });
+
+    if (!paymentLink) {
+      throw new NotFoundException('Payment link not found');
+    }
+
+    return paymentLink;
   }
 }

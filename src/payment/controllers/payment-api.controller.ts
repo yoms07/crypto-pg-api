@@ -36,10 +36,10 @@ export class PaymentApiController {
     @CurrentBusinessProfile() businessProfile: BusinessProfile,
     @Body() createPaymentDto: CreatePaymentLinkDto,
   ): Promise<ApiResponse<any>> {
-    const paymentLink = await this.paymentService.create(
-      businessProfile,
-      createPaymentDto,
-    );
+    const paymentLink = await this.paymentService.create(businessProfile, {
+      ...createPaymentDto,
+      source: 'api',
+    });
     return ApiResponseBuilder.success(
       paymentLink,
       'Payment link created successfully',
@@ -57,9 +57,10 @@ export class PaymentApiController {
       query,
       paginationMetadata,
     );
+    const paginationResult = toPaginationMetadata(query, total); // Calculate pagination metadat
 
     return ApiResponseBuilder.success(
-      { data, pagination: { ...paginationMetadata, total } },
+      { data, pagination: { ...paginationResult, total } },
       'Payment links retrieved successfully',
     );
   }

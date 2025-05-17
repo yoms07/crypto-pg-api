@@ -15,6 +15,7 @@ export class Web3Service {
     paymentLink: PaymentLink,
     sender: string,
   ): Promise<PaymentIntent> {
+    console.log('constructing');
     let amount = ethers.parseUnits(
       paymentLink.pricing.local.amount,
       paymentLink.pricing.local.asset.decimals,
@@ -33,7 +34,7 @@ export class Web3Service {
       recipientCurrency: paymentLink.pricing.local.asset.address,
       refundDestination: sender,
       feeAmount: '0',
-      id: '0x' + paymentLink.payment_id.replaceAll('-', ''),
+      id: paymentLink.payment_id.replaceAll('-', ''),
       operator: this.config.operator_address,
       deadline: Math.floor(paymentLink.expired_at.getTime() / 1000),
       signature: '',
@@ -75,8 +76,14 @@ export class Web3Service {
         this.config.pg_contract_address,
       ],
     );
-
-    return ethers.keccak256(encodedData);
+    const firstHash = ethers.keccak256(encodedData);
+    return firstHash;
+    const ethSignPrefix = `\x19Ethereum Signed Message:\n32`;
+    const prefixedMessage = ethers.concat([
+      ethers.toUtf8Bytes(ethSignPrefix),
+      ethers.getBytes(firstHash),
+    ]);
+    return ethers.keccak256(prefixedMessage);
   }
   private async signPaymentIntent(
     intent: PaymentIntent,

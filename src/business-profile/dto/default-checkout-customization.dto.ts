@@ -1,26 +1,27 @@
 import { z } from 'zod';
 
 export const checkoutCustomizationDto = z.object({
-  primary_color: z.string().default('#0066FF'),
-  secondary_color: z.string().default('#FFFFFF'),
-  background_color: z.string().default('#F5F5F5'),
-  logo_url: z.string().optional(),
-  company_name_display: z.boolean().default(true),
-  success_message: z.string().default('Thank you for your payment!'),
-  cancel_message: z.string().default('Payment cancelled. Please try again.'),
-  button_text: z.string().default('Pay Now'),
-  show_powered_by: z.boolean().default(true),
+  primaryColor: z.string().default('#0066FF'),
+  topBarColor: z.string().default('#FFFFFF'),
+  topBarTextColor: z.string().default('#000000'),
+  secondaryColor: z.string().default('#F5F5F5'),
+  borderRadius: z.string().default('8px'),
+  overlayColor: z.string().default('#FFFFFF'),
+  bottomBarColor: z.string().default('#FFFFFF'),
+  primaryTextColor: z.string().default('#000000'),
+  secondaryTextColor: z.string().default('#666666'),
 });
 
 export type CheckoutCustomizationDto = z.infer<typeof checkoutCustomizationDto>;
 
 export const defaultCheckoutCustomization: CheckoutCustomizationDto = {
-  primary_color: '#0066FF',
-  secondary_color: '#FFFFFF',
-  background_color: '#F5F5F5',
-  company_name_display: true,
-  success_message: 'Thank you for your payment!',
-  cancel_message: 'Payment cancelled. Please try again.',
-  button_text: 'Pay Now',
-  show_powered_by: true,
+  primaryColor: '#0066FF',
+  topBarColor: '#FFFFFF',
+  topBarTextColor: '#000000',
+  secondaryColor: '#F5F5F5',
+  borderRadius: '8px',
+  overlayColor: '#FFFFFF',
+  bottomBarColor: '#FFFFFF',
+  primaryTextColor: '#000000',
+  secondaryTextColor: '#666666',
 };

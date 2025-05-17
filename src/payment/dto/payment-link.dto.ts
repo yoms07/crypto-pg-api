@@ -13,6 +13,18 @@ export interface CustomerDto {
   source: 'business' | 'customer';
 }
 
+export interface CheckoutCustomizationDto {
+  primaryColor?: string;
+  topBarColor?: string;
+  topBarTextColor?: string;
+  secondaryColor?: string;
+  borderRadius?: string;
+  overlayColor?: string;
+  bottomBarColor?: string;
+  primaryTextColor?: string;
+  secondaryTextColor?: string;
+}
+
 export class PaymentLinkDto {
   id: string;
   business_profile_id: string;
@@ -33,4 +45,5 @@ export class PaymentLinkDto {
   expired_at: Date;
   created_at: Date;
   updated_at: Date;
+  checkout_customization?: CheckoutCustomizationDto;
 }

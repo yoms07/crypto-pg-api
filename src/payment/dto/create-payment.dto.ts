@@ -21,6 +21,7 @@ export const createPaymentLinkSchema = z.object({
   customer: customerSchema,
   metadata: z.record(z.any()).optional(),
   pricing: pricingSchema,
+  source: z.enum(['api', 'dashboard', 'checkout_link']).optional(),
 });
 
 export type CreatePaymentLinkDto = z.infer<typeof createPaymentLinkSchema>;

@@ -5,7 +5,6 @@ import {
   Body,
   Param,
   UseGuards,
-  UsePipes,
   Post,
 } from '@nestjs/common';
 import { BusinessProfileService } from './service/business-profile.service';
@@ -21,6 +20,10 @@ import { ParseObjectIdPipe } from '@nestjs/mongoose';
 import { BusinessProfileDto } from './dto/business-profile.dto';
 import { ApiKeyService } from './service/api-key.service';
 import { CreateProfileDto, createProfileDto } from './dto/create-profile.dto';
+import {
+  UpdateCheckoutCustomizationDto,
+  updateCheckoutCustomizationDto,
+} from './dto/update-checkout-customization.dto';
 
 @Controller('business-profile')
 @UseGuards(AuthGuard)
@@ -100,11 +103,10 @@ export class BusinessProfileController {
   }
 
   @Put(':id')
-  @UsePipes(new ZodValidationPipe(updateProfileDto))
   async updateProfile(
     @CurrentUser() user: User,
     @Param('id') profileId: string,
-    @Body() updateData: UpdateProfileDto,
+    @Body(new ZodValidationPipe(updateProfileDto)) updateData: UpdateProfileDto,
   ): Promise<ApiResponse<BusinessProfile>> {
     const profile = await this.businessProfileService.updateProfile(
       user.id as string,
@@ -148,6 +150,26 @@ export class BusinessProfileController {
     return ApiResponseBuilder.success(
       this.transformToDto(profile),
       'Webhook configuration updated successfully',
+    );
+  }
+
+  @Put(':id/checkout-customization')
+  async updateCheckoutCustomization(
+    @CurrentUser() user: User,
+    @Param('id', ParseObjectIdPipe) profileId: string,
+    @Body(new ZodValidationPipe(updateCheckoutCustomizationDto))
+    customizationData: UpdateCheckoutCustomizationDto,
+  ): Promise<ApiResponse<BusinessProfileDto>> {
+    console.log(customizationData);
+    const profile =
+      await this.businessProfileService.updateCheckoutCustomization(
+        user.id as string,
+        profileId,
+        customizationData,
+      );
+    return ApiResponseBuilder.success(
+      this.transformToDto(profile),
+      'Checkout customization updated successfully',
     );
   }
 

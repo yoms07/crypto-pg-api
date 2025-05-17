@@ -12,6 +12,7 @@ import { ApiKey } from '../schemas/api-key.schema';
 import { Wallet } from '../schemas/wallet.schema';
 import { ApiKeyService } from './api-key.service';
 import axios from 'axios';
+import { CheckoutCustomization } from '../schemas/checkout-customization.schema';
 
 @Injectable()
 export class BusinessProfileService {
@@ -23,6 +24,8 @@ export class BusinessProfileService {
     private apiKeyModel: Model<ApiKey>,
     @InjectModel(Wallet.name)
     private walletModel: Model<Wallet>,
+    @InjectModel(CheckoutCustomization.name)
+    private checkoutCustomizationModel: Model<CheckoutCustomization>,
     private apiKeyService: ApiKeyService,
   ) {}
 
@@ -265,6 +268,54 @@ export class BusinessProfileService {
       },
       checkout_customization: null,
     });
+    return await profile.save();
+  }
+
+  async updateCheckoutCustomization(
+    userId: string,
+    profileId: string,
+    customizationData: {
+      primaryColor?: string;
+      topBarColor?: string;
+      topBarTextColor?: string;
+      secondaryColor?: string;
+      borderRadius?: string;
+      overlayColor?: string;
+      bottomBarColor?: string;
+      primaryTextColor?: string;
+      secondaryTextColor?: string;
+    },
+  ): Promise<BusinessProfile> {
+    const profile = await this.businessProfileModel.findOne({
+      _id: profileId,
+      user_id: userId,
+    });
+    if (!profile) {
+      throw new NotFoundException('Business profile not found');
+    }
+
+    if (!profile.checkout_customization) {
+      profile.checkout_customization = new this.checkoutCustomizationModel({
+        primaryColor: customizationData.primaryColor || '#0066FF',
+        topBarColor: customizationData.topBarColor || '#FFFFFF',
+        topBarTextColor: customizationData.topBarTextColor || '#000000',
+        secondaryColor: customizationData.secondaryColor || '#F5F5F5',
+        borderRadius: customizationData.borderRadius || '8px',
+        overlayColor: customizationData.overlayColor || '#FFFFFF',
+        bottomBarColor: customizationData.bottomBarColor || '#FFFFFF',
+        primaryTextColor: customizationData.primaryTextColor || '#000000',
+        secondaryTextColor: customizationData.secondaryTextColor || '#666666',
+      });
+    } else {
+      // Update only provided fields
+      Object.entries(customizationData).forEach(([key, value]) => {
+        if (value !== undefined) {
+          profile.checkout_customization[key] = value;
+        }
+      });
+    }
+    console.log(profile.checkout_customization);
+    console.log('saving');
     return await profile.save();
   }
 }

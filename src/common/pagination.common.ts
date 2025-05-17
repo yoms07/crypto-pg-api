@@ -6,6 +6,8 @@ export interface PaginationMetadata {
   itemsPerPage: number;
   totalPages?: number;
   currentPage: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
 }
 
 export const paginationSchema = z.object({
@@ -30,11 +32,18 @@ export type PaginationQuery = z.infer<typeof paginationSchema>;
 
 export const toPaginationMetadata = (
   query: PaginationQuery,
+  totalItems: number = 0,
 ): PaginationMetadata => {
   const { page, limit } = query;
+  const totalPages = Math.ceil(totalItems / limit);
+
   return {
     itemCount: 0,
+    totalItems,
     itemsPerPage: limit,
+    totalPages,
     currentPage: page,
+    hasNext: page < totalPages,
+    hasPrevious: page > 1,
   };
 };

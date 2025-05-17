@@ -105,6 +105,9 @@ class BlockchainData {
 
 @Schema({ _id: false })
 class Item {
+  @Prop()
+  item_id: string;
+
   @Prop({ required: true })
   name: string;
 
@@ -135,6 +138,13 @@ export class PaymentLink extends Document {
     required: true,
   })
   business_profile_id: BusinessProfile;
+
+  @Prop({
+    type: String,
+    enum: ['api', 'dashboard', 'checkout_link'],
+    default: 'dashboard',
+  })
+  source: string;
 
   @Prop()
   success_redirect_url: string;

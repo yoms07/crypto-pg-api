@@ -62,10 +62,10 @@ export class PaymentController {
     @Body(new ZodValidationPipe(createPaymentLinkSchema))
     createPaymentDto: CreatePaymentLinkDto,
   ): Promise<ApiResponse<PaymentLinkDto>> {
-    const paymentLink = await this.paymentService.create(
-      businessProfile,
-      createPaymentDto,
-    );
+    const paymentLink = await this.paymentService.create(businessProfile, {
+      ...createPaymentDto,
+      source: 'dashboard',
+    });
     return ApiResponseBuilder.success(
       this.transformToDto(paymentLink),
       'Payment link created successfully',

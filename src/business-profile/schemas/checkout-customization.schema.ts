@@ -11,19 +11,31 @@ export type CheckoutCustomizationDocument =
 @Schema({ timestamps: false, id: false })
 export class CheckoutCustomization extends Document {
   @Prop()
-  primary_color: string;
+  primaryColor: string;
 
   @Prop()
-  secondary_color: string;
+  topBarColor: string;
 
   @Prop()
-  logo_position: string;
+  topBarTextColor: string;
 
   @Prop()
-  background_image_url: string;
+  secondaryColor: string;
 
   @Prop()
-  custom_css: string;
+  borderRadius: string;
+
+  @Prop()
+  overlayColor: string;
+
+  @Prop()
+  bottomBarColor: string;
+
+  @Prop()
+  primaryTextColor: string;
+
+  @Prop()
+  secondaryTextColor: string;
 }
 
 export const CheckoutCustomizationSchema = SchemaFactory.createForClass(

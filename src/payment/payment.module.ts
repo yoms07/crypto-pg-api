@@ -10,6 +10,7 @@ import web3Config from '@/config/web3.config';
 import { OutboundWebhookModule } from '@/outbound-webhook/outbound-webhook.module';
 import { AuthModule } from '@/auth/auth.module';
 import { BusinessProfileModule } from '@/business-profile/business-profile.module';
+import { PaymentPublicController } from './controllers/payment-public.controller';
 
 @Module({
   imports: [
@@ -24,7 +25,11 @@ import { BusinessProfileModule } from '@/business-profile/business-profile.modul
     OutboundWebhookModule,
     BusinessProfileModule,
   ],
-  controllers: [PaymentController, PaymentApiController],
+  controllers: [
+    PaymentController,
+    PaymentApiController,
+    PaymentPublicController,
+  ],
   providers: [Web3Service, PaymentService],
   exports: [PaymentService],
 })
