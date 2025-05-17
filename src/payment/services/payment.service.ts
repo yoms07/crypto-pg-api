@@ -112,7 +112,7 @@ export class PaymentService {
         success_event: null,
         failure_event: null,
       },
-      items: [],
+      items: createPaymentLinkDto.items || [],
     });
 
     this.logger.debug('Creating payment link with data:', paymentLink); // Add debug log

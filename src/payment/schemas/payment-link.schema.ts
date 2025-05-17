@@ -119,6 +119,9 @@ class Item {
 
   @Prop({ required: true })
   unit_price: string;
+
+  @Prop({ required: true })
+  unit_currency: string;
 }
 
 @Schema({ timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } })

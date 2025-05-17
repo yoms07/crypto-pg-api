@@ -13,6 +13,15 @@ const pricingSchema = z.object({
   currency: z.string(),
 });
 
+const itemSchema = z.object({
+  item_id: z.string().optional(),
+  name: z.string(),
+  description: z.string().optional(),
+  quantity: z.number().int().positive(),
+  unit_price: z.string(),
+  unit_currency: z.literal('IDR'),
+});
+
 export const createPaymentLinkSchema = z.object({
   external_id: z.string(),
   success_redirect_url: z.string().url().optional(),
@@ -22,6 +31,7 @@ export const createPaymentLinkSchema = z.object({
   metadata: z.record(z.any()).optional(),
   pricing: pricingSchema,
   source: z.enum(['api', 'dashboard', 'checkout_link']).optional(),
+  items: z.array(itemSchema).optional(),
 });
 
 export type CreatePaymentLinkDto = z.infer<typeof createPaymentLinkSchema>;
