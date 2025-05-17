@@ -160,7 +160,6 @@ export class BusinessProfileController {
     @Body(new ZodValidationPipe(updateCheckoutCustomizationDto))
     customizationData: UpdateCheckoutCustomizationDto,
   ): Promise<ApiResponse<BusinessProfileDto>> {
-    console.log(customizationData);
     const profile =
       await this.businessProfileService.updateCheckoutCustomization(
         user.id as string,

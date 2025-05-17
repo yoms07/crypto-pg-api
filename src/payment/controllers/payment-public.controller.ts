@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, Body } from '@nestjs/common';
+import { Controller, Get, Param, Post, Body, Patch } from '@nestjs/common';
 import { PaymentService } from '../services/payment.service';
 import { ApiResponse, ApiResponseBuilder } from '@/common/response.common';
 import { PaymentLinkDto } from '../dto/payment-link.dto';
@@ -7,6 +7,12 @@ import {
   initiatePaymentSchema,
 } from '../dto/initiate-payment.dto';
 import { ZodValidationPipe } from '@/zod-validation';
+import {
+  AddCustomerInfoDto,
+  addCustomerInfoSchema,
+  MarkPendingCompleteDto,
+  markPendingCompleteSchema,
+} from '../dto/update-customer-info';
 
 @Controller('/public/payment')
 export class PaymentPublicController {
@@ -36,6 +42,41 @@ export class PaymentPublicController {
     return ApiResponseBuilder.success(
       paymentIntent,
       'Payment initiated successfully',
+    );
+  }
+
+  @Patch(':id/mark-pending-complete')
+  async markPendingComplete(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(markPendingCompleteSchema))
+    dto: MarkPendingCompleteDto,
+  ): Promise<ApiResponse<PaymentLinkDto>> {
+    const paymentLink = await this.paymentService.markPendingComplete(
+      id,
+      dto.sender,
+      dto.signature,
+    );
+    return ApiResponseBuilder.success(
+      PaymentLinkDto.transformToDTOPublic(paymentLink),
+      'Payment marked as pending-complete successfully',
+    );
+  }
+
+  @Patch(':id/customer')
+  async addCustomerInfo(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(addCustomerInfoSchema))
+    dto: AddCustomerInfoDto,
+  ): Promise<ApiResponse<PaymentLinkDto>> {
+    const paymentLink = await this.paymentService.addCustomerInfo(
+      id,
+      dto.sender,
+      dto.signature,
+      dto.customer,
+    );
+    return ApiResponseBuilder.success(
+      PaymentLinkDto.transformToDTOPublic(paymentLink),
+      'Customer info added successfully',
     );
   }
 }

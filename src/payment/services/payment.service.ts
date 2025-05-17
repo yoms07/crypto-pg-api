@@ -15,6 +15,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { PaymentIntent } from '../entities/payment-intent.entity';
 import { formatUUID } from '@/utils/uuid';
 import { OutboundWebhookService } from '@/outbound-webhook/outbound-webhook.service';
+import { CustomerSource } from '../schemas/customer.schema';
 
 @Injectable()
 export class PaymentService {
@@ -136,7 +137,6 @@ export class PaymentService {
         select:
           'checkout_customization _id business_name logo_url business_description contact_email contact_phone wallet',
       });
-    console.log(paymentLink);
 
     if (!paymentLink) {
       throw new NotFoundException('Payment link not found');
@@ -250,7 +250,7 @@ export class PaymentService {
     return await paymentLink.save();
   }
 
-  async markPaid(paymentIntent: PaymentIntent): Promise<void> {
+  async markPaid(paymentIntent: PaymentIntent, txHash: string): Promise<void> {
     const id = formatUUID(paymentIntent.id);
     const paymentLink = await this.paymentLinkModel
       .findOne({ payment_id: id })
@@ -259,13 +259,19 @@ export class PaymentService {
       throw new NotFoundException('Payment link not found');
     }
 
-    if (paymentLink.status !== 'processing') {
-      throw new BadRequestException('Payment link is not in processing status');
+    if (
+      paymentLink.status !== 'processing' &&
+      paymentLink.status !== 'pending-complete'
+    ) {
+      throw new BadRequestException(
+        'Payment link is not in processing/pending-complete status',
+      );
     }
 
     paymentLink.status = 'completed';
     paymentLink.success_at = new Date();
     paymentLink.blockchain_data.success_event = paymentIntent;
+    paymentLink.txHash = txHash;
 
     await paymentLink.save();
 
@@ -324,5 +330,104 @@ export class PaymentService {
     }
 
     return paymentLink;
+  }
+
+  async markPendingComplete(
+    id: string,
+    sender: string,
+    signature: string,
+  ): Promise<PaymentLink> {
+    const paymentLink = await this.paymentLinkModel
+      .findOne({ payment_id: id })
+      .populate({
+        path: 'business_profile_id',
+        select:
+          'checkout_customization _id business_name logo_url business_description contact_email contact_phone',
+      });
+
+    if (!paymentLink) {
+      throw new NotFoundException('Payment link not found');
+    }
+
+    if (
+      paymentLink.status === 'pending-complete' ||
+      paymentLink.status === 'completed'
+    ) {
+      return paymentLink;
+    }
+
+    if (paymentLink.status !== 'processing') {
+      throw new BadRequestException('Payment link is not in processing status');
+    }
+
+    // Verify that the sender has a payment intent
+    const paymentIntent = paymentLink.blockchain_data.transfer_intent[sender];
+    if (!paymentIntent) {
+      throw new BadRequestException('No payment intent found for this sender');
+    }
+
+    // Verify the signature matches
+    if (paymentIntent.signature !== signature) {
+      throw new BadRequestException('Invalid signature');
+    }
+
+    paymentLink.status = 'pending-complete';
+    return await paymentLink.save();
+  }
+
+  async addCustomerInfo(
+    id: string,
+    sender: string,
+    signature: string,
+    customerInfo: {
+      name?: string;
+      email?: string;
+      address?: string;
+      phone?: string;
+    },
+  ): Promise<PaymentLink> {
+    const paymentLink = await this.paymentLinkModel
+      .findOne({ payment_id: id })
+      .populate({
+        path: 'business_profile_id',
+        select:
+          'checkout_customization _id business_name logo_url business_description contact_email contact_phone',
+      });
+
+    if (!paymentLink) {
+      throw new NotFoundException('Payment link not found');
+    }
+
+    // Verify that the sender has a payment intent
+    const paymentIntent = paymentLink.blockchain_data.transfer_intent[sender];
+    if (!paymentIntent) {
+      throw new BadRequestException('No payment intent found for this sender');
+    }
+
+    // Verify the signature matches
+    if (paymentIntent.signature !== signature) {
+      throw new BadRequestException('Invalid signature');
+    }
+
+    // Check if customer info already exists and is from business
+    if (
+      paymentLink.customer &&
+      paymentLink.customer.source === CustomerSource.BUSINESS
+    ) {
+      throw new BadRequestException(
+        'Customer info can only be set by business',
+      );
+    }
+
+    // Add customer info with source as 'customer'
+    paymentLink.customer = {
+      name: customerInfo.name || '',
+      email: customerInfo.email || '',
+      address: customerInfo.address || '',
+      phone: customerInfo.phone || '',
+      source: CustomerSource.CUSTOMER,
+    };
+
+    return await paymentLink.save();
   }
 }

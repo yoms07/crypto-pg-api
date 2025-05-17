@@ -46,6 +46,9 @@ export class PaymentLink extends Document {
 
   @Prop({ type: Date })
   expires_at: Date;
+
+  @Prop()
+  txHash: string;
 }
 
 export const PaymentLinkSchema = SchemaFactory.createForClass(PaymentLink);

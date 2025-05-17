@@ -74,10 +74,10 @@ export class AuthController {
     );
   }
 
-  @Post('verify-email')
+  @Get('verify-email')
   @UsePipes(new ZodValidationPipe(verifyEmailDto))
   async verifyEmail(
-    @Body() verifyDto: VerifyEmailDto,
+    @Query() verifyDto: VerifyEmailDto,
   ): Promise<ApiResponse<{ success: boolean; message: string }>> {
     const response = await this.authService.verifyEmail(verifyDto);
     return ApiResponseBuilder.success(response, 'Successfully verified email');

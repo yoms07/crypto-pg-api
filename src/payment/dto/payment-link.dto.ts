@@ -61,6 +61,7 @@ export class PaymentLinkDto {
   updated_at: Date;
   checkout_customization?: CheckoutCustomizationDto;
   business_profile?: BusinessProfilePublicDto;
+  txHash?: string;
 
   static transformToDTO(paymentLink: PaymentLink): PaymentLinkDto {
     return {
@@ -86,6 +87,7 @@ export class PaymentLinkDto {
       source: paymentLink.source,
       checkout_customization:
         paymentLink.business_profile_id?.checkout_customization,
+      txHash: paymentLink.txHash,
     };
   }
 

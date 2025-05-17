@@ -15,11 +15,7 @@ export class Web3Service {
     paymentLink: PaymentLink,
     sender: string,
   ): Promise<PaymentIntent> {
-    console.log('constructing');
-    let amount = ethers.parseUnits(
-      paymentLink.pricing.local.amount,
-      paymentLink.pricing.local.asset.decimals,
-    );
+    let amount = BigInt(paymentLink.pricing.local.amount);
     if (paymentLink.pricing.local.asset.type === 'native') {
       amount = ethers.parseEther(amount.toString());
     } else if (paymentLink.pricing.local.asset.type === 'token') {
@@ -76,14 +72,8 @@ export class Web3Service {
         this.config.pg_contract_address,
       ],
     );
-    const firstHash = ethers.keccak256(encodedData);
-    return firstHash;
-    const ethSignPrefix = `\x19Ethereum Signed Message:\n32`;
-    const prefixedMessage = ethers.concat([
-      ethers.toUtf8Bytes(ethSignPrefix),
-      ethers.getBytes(firstHash),
-    ]);
-    return ethers.keccak256(prefixedMessage);
+
+    return ethers.keccak256(encodedData);
   }
   private async signPaymentIntent(
     intent: PaymentIntent,

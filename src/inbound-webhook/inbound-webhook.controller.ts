@@ -1,5 +1,4 @@
-import { Body, Controller, Post, UseGuards, Logger } from '@nestjs/common';
-import { MoralisStreamGuard } from './guards/moralis-stream.guard';
+import { Body, Controller, Post, Logger } from '@nestjs/common';
 import { PaymentService } from '@/payment/services/payment.service';
 import { MoralisWebhookEvent } from './dto/inbound-webhook.dto';
 import * as ethers from 'ethers';
@@ -37,18 +36,21 @@ export class InboundWebhookController {
 
         const [id, recipient, sender, spentAmount, spentCurrency] = decodedLog;
 
-        await this.paymentService.markPaid({
-          recipientAmount: spentAmount as string,
-          deadline: parseInt(webhook.block.timestamp),
-          recipient: recipient as string,
-          recipientCurrency: spentCurrency as string,
-          refundDestination: sender as string,
-          feeAmount: '0',
-          id: (id as string).slice(2), // Remove '0x' prefix
-          operator: operator,
-          signature: log.transactionHash,
-          prefix: '',
-        });
+        await this.paymentService.markPaid(
+          {
+            recipientAmount: spentAmount as string,
+            deadline: parseInt(webhook.block.timestamp),
+            recipient: recipient as string,
+            recipientCurrency: spentCurrency as string,
+            refundDestination: sender as string,
+            feeAmount: '0',
+            id: (id as string).slice(2), // Remove '0x' prefix
+            operator: operator,
+            signature: log.transactionHash,
+            prefix: '',
+          },
+          log.transactionHash,
+        );
 
         this.logger.log(`Payment marked as paid: ${id}`);
       }

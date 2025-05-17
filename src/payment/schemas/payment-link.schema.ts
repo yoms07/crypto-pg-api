@@ -175,7 +175,14 @@ export class PaymentLink extends Document {
 
   @Prop({
     type: String,
-    enum: ['pending', 'processing', 'completed', 'failed', 'expired'],
+    enum: [
+      'pending',
+      'processing',
+      'completed',
+      'failed',
+      'expired',
+      'pending-complete',
+    ],
     default: 'pending',
   })
   status: string;
@@ -188,6 +195,9 @@ export class PaymentLink extends Document {
 
   @Prop({ type: Date, required: true })
   expired_at: Date;
+
+  @Prop()
+  txHash: string;
 
   @Prop({ type: Date })
   created_at: Date;

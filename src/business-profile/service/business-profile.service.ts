@@ -314,8 +314,6 @@ export class BusinessProfileService {
         }
       });
     }
-    console.log(profile.checkout_customization);
-    console.log('saving');
     return await profile.save();
   }
 }
