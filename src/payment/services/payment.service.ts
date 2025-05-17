@@ -126,11 +126,18 @@ export class PaymentService {
     paymentId: string,
     sender: string,
   ): Promise<PaymentIntent> {
-    const paymentLink = await this.paymentLinkModel.findOne({
-      business_profile_id: businessProfile._id,
-      payment_id: paymentId,
-    });
-    console.log(paymentLink?.blockchain_data.transfer_intent);
+    const paymentLink = await this.paymentLinkModel
+      .findOne({
+        business_profile_id: businessProfile._id,
+        payment_id: paymentId,
+      })
+      .populate({
+        path: 'business_profile_id',
+        select:
+          'checkout_customization _id business_name logo_url business_description contact_email contact_phone wallet',
+      });
+    console.log(paymentLink);
+
     if (!paymentLink) {
       throw new NotFoundException('Payment link not found');
     }
@@ -146,14 +153,12 @@ export class PaymentService {
       paymentLink.blockchain_data.transfer_intent &&
       sender in paymentLink.blockchain_data.transfer_intent
     ) {
-      console.log('sampe sini');
       const paymentIntent = paymentLink.blockchain_data.transfer_intent[sender];
       if (paymentIntent && paymentIntent.deadline > Date.now() / 1000) {
         return paymentIntent;
       }
     }
 
-    paymentLink.business_profile_id = businessProfile;
     // Construct payment intent
     const paymentIntentData = await this.web3Service.constructPaymentIntent(
       paymentLink,

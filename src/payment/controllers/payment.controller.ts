@@ -94,21 +94,4 @@ export class PaymentController {
       'Payment link retrieved successfully',
     );
   }
-
-  @Post(':id/initiate')
-  async initiatePayment(
-    @CurrentBusinessProfile() businessProfile: BusinessProfile,
-    @Param('id') id: string,
-    @Body('sender') sender: string,
-  ): Promise<ApiResponse<any>> {
-    const paymentIntent = await this.paymentService.initiatePayment(
-      businessProfile,
-      id,
-      sender,
-    );
-    return ApiResponseBuilder.success(
-      paymentIntent,
-      'Payment initiated successfully',
-    );
-  }
 }
