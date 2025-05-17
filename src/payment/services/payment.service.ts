@@ -310,7 +310,8 @@ export class PaymentService {
       .findOne({ payment_id: id })
       .populate({
         path: 'business_profile_id',
-        select: 'checkout_customization _id',
+        select:
+          'checkout_customization _id business_name logo_url business_description contact_email contact_phone',
       });
 
     if (!paymentLink) {

@@ -11,7 +11,7 @@ export class PaymentPublicController {
   async findOne(@Param('id') id: string): Promise<ApiResponse<PaymentLinkDto>> {
     const paymentLink = await this.paymentService.findOnePublic(id);
     return ApiResponseBuilder.success(
-      PaymentLinkDto.transformToDTO(paymentLink),
+      PaymentLinkDto.transformToDTOPublic(paymentLink),
       'Payment link retrieved successfully',
     );
   }
