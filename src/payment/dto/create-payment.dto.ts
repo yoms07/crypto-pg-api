@@ -1,12 +1,36 @@
 import { z } from 'zod';
 
-const customerSchema = z.object({
-  name: z.string(),
-  email: z.string().email(),
-  address: z.string(),
-  phone: z.string(),
-  source: z.enum(['business', 'customer']),
-});
+const customerSchema = z
+  .object({
+    name: z.string().optional(),
+    email: z.string().optional(),
+    address: z.string().optional(),
+    phone: z.string().optional(),
+    source: z.enum(['business', 'customer']),
+  })
+  .refine(
+    (data) => {
+      if (data.source === 'business') {
+        return !!(data.name && data.email && data.address && data.phone);
+      }
+      return true;
+    },
+    {
+      message:
+        'Name, email, address, and phone are required when source is business',
+    },
+  )
+  .refine(
+    (data) => {
+      if (data.source === 'business' && data.email) {
+        return z.string().email().safeParse(data.email).success;
+      }
+      return true;
+    },
+    {
+      message: 'Invalid email format when source is business',
+    },
+  );
 
 const pricingSchema = z.object({
   amount: z.string(),

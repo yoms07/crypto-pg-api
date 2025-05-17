@@ -9,10 +9,10 @@ import { BusinessProfile } from '../schemas/business-profile.schema';
 export const CurrentBusinessProfile = createParamDecorator(
   (data: unknown, ctx: ExecutionContext): BusinessProfile => {
     const request = ctx.switchToHttp().getRequest<AppRequest>();
-    const user = request.user;
-    if (!user) {
+    if (!request.businessProfile) {
       throw new UnauthorizedException('unauthorized');
     }
+
     return request.businessProfile as BusinessProfile;
   },
 );

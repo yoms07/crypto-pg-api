@@ -11,11 +11,12 @@ export class ZodValidationPipe implements PipeTransform {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   transform(value: any, _: ArgumentMetadata): any {
     try {
+      console.log('value', value);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const parsedValue = this.schema.parse(value);
       return parsedValue;
     } catch (e) {
-      console.error(e);
+      console.log(JSON.stringify(e, null, 2));
       throw new BadRequestException('Validation failed');
     }
   }

@@ -6,7 +6,6 @@ import {
   Param,
   Query,
   UseGuards,
-  UsePipes,
   Put,
 } from '@nestjs/common';
 import { PaymentService } from '../services/payment.service';
@@ -24,6 +23,7 @@ import {
   paginationSchema,
   toPaginationMetadata,
 } from '@/common/pagination.common';
+import { PaymentLinkDto } from '../dto/payment-link.dto';
 
 @Controller('/api/payment')
 @UseGuards(ValidApiKeyGuard)
@@ -31,17 +31,17 @@ export class PaymentApiController {
   constructor(private readonly paymentService: PaymentService) {}
 
   @Post()
-  @UsePipes(new ZodValidationPipe(createPaymentLinkSchema))
   async create(
     @CurrentBusinessProfile() businessProfile: BusinessProfile,
-    @Body() createPaymentDto: CreatePaymentLinkDto,
+    @Body(new ZodValidationPipe(createPaymentLinkSchema))
+    createPaymentDto: CreatePaymentLinkDto,
   ): Promise<ApiResponse<any>> {
     const paymentLink = await this.paymentService.create(businessProfile, {
       ...createPaymentDto,
       source: 'api',
     });
     return ApiResponseBuilder.success(
-      paymentLink,
+      PaymentLinkDto.transformToDTO(paymentLink),
       'Payment link created successfully',
     );
   }
@@ -57,10 +57,13 @@ export class PaymentApiController {
       query,
       paginationMetadata,
     );
-    const paginationResult = toPaginationMetadata(query, total); // Calculate pagination metadat
+    const paginationResult = toPaginationMetadata(query, total);
 
     return ApiResponseBuilder.success(
-      { data, pagination: { ...paginationResult, total } },
+      {
+        data: data.map((payment) => PaymentLinkDto.transformToDTO(payment)),
+        pagination: { ...paginationResult, total },
+      },
       'Payment links retrieved successfully',
     );
   }
@@ -75,7 +78,7 @@ export class PaymentApiController {
       id,
     );
     return ApiResponseBuilder.success(
-      paymentLink,
+      PaymentLinkDto.transformToDTO(paymentLink),
       'Payment link marked as expired',
     );
   }
@@ -87,7 +90,7 @@ export class PaymentApiController {
   ): Promise<ApiResponse<any>> {
     const paymentLink = await this.paymentService.findOne(businessProfile, id);
     return ApiResponseBuilder.success(
-      paymentLink,
+      PaymentLinkDto.transformToDTO(paymentLink),
       'Payment link retrieved successfully',
     );
   }
@@ -102,7 +105,7 @@ export class PaymentApiController {
       externalId,
     );
     return ApiResponseBuilder.success(
-      paymentLink,
+      PaymentLinkDto.transformToDTO(paymentLink),
       'Payment link retrieved successfully',
     );
   }

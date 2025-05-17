@@ -14,8 +14,16 @@ import { AuthGuard } from '@/auth/guards/auth.guard';
 import { BusinessProfileGuard } from '@/business-profile/guards/business-profile-param.guard';
 import { CurrentBusinessProfile } from '@/business-profile/decorators/current-business-profile.decorator';
 import { BusinessProfile } from '@/business-profile/schemas/business-profile.schema';
-import { CreateProductDto } from './dto/create-product.dto';
-import { UpdateProductDto } from './dto/update-product.dto';
+import {
+  CreateProductDto,
+  createProductSchema,
+} from './dto/create-product.dto';
+import {
+  UpdateProductDto,
+  updateProductSchema,
+} from './dto/update-product.dto';
+import { UpdateStockDto, updateStockSchema } from './dto/update-stock.dto';
+import { ZodValidationPipe } from '@/zod-validation';
 
 @Controller('/products/:businessProfileId')
 @UseGuards(AuthGuard)
@@ -25,7 +33,8 @@ export class ProductsController {
   @Post()
   @UseGuards(BusinessProfileGuard)
   create(
-    @Body() createProductDto: CreateProductDto,
+    @Body(new ZodValidationPipe(createProductSchema))
+    createProductDto: CreateProductDto,
     @CurrentBusinessProfile() businessProfile: BusinessProfile,
   ) {
     return this.productsService.create(businessProfile, createProductDto);
@@ -68,7 +77,8 @@ export class ProductsController {
   @UseGuards(BusinessProfileGuard)
   update(
     @Param('id') id: string,
-    @Body() updateProductDto: UpdateProductDto,
+    @Body(new ZodValidationPipe(updateProductSchema))
+    updateProductDto: UpdateProductDto,
     @CurrentBusinessProfile() businessProfile: BusinessProfile,
   ) {
     return this.productsService.update(businessProfile, id, updateProductDto);
@@ -78,10 +88,15 @@ export class ProductsController {
   @UseGuards(BusinessProfileGuard)
   updateStock(
     @Param('id') id: string,
-    @Body('quantity') quantity: number,
+    @Body(new ZodValidationPipe(updateStockSchema))
+    updateStockDto: UpdateStockDto,
     @CurrentBusinessProfile() businessProfile: BusinessProfile,
   ) {
-    return this.productsService.updateStock(businessProfile, id, quantity);
+    return this.productsService.updateStock(
+      businessProfile,
+      id,
+      updateStockDto.quantity,
+    );
   }
 
   @Delete(':id')

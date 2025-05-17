@@ -35,6 +35,9 @@ export class Product extends Document {
 
   @Prop({ type: Object })
   metadata: Record<string, any>;
+
+  @Prop({ default: false })
+  deleted: boolean;
 }
 
 export const ProductSchema = SchemaFactory.createForClass(Product);

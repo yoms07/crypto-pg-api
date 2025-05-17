@@ -8,7 +8,7 @@ export const updateProductSchema = z.object({
   unit_currency: z.literal('IDR').optional(),
   sku: z.string().optional(),
   stock: z.number().int().min(0).optional(),
-  image_url: z.string().url().optional(),
+  image_url: z.string().optional(),
   metadata: z.record(z.any()).optional(),
   is_active: z.boolean().optional(),
 });

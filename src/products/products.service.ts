@@ -25,7 +25,10 @@ export class ProductsService {
 
   async findAll(businessProfile: BusinessProfile): Promise<Product[]> {
     return this.productModel
-      .find({ business_profile_id: businessProfile._id })
+      .find({
+        business_profile_id: businessProfile._id,
+        deleted: false,
+      })
       .exec();
   }
 
@@ -37,6 +40,7 @@ export class ProductsService {
       .findOne({
         _id: id,
         business_profile_id: businessProfile._id,
+        deleted: false,
       })
       .exec();
 
@@ -53,7 +57,7 @@ export class ProductsService {
   ): Promise<Product> {
     const updatedProduct = await this.productModel
       .findOneAndUpdate(
-        { _id: id, business_profile_id: businessProfile._id },
+        { _id: id, business_profile_id: businessProfile._id, deleted: false },
         updateProductDto,
         { new: true },
       )
@@ -67,10 +71,14 @@ export class ProductsService {
 
   async remove(businessProfile: BusinessProfile, id: string): Promise<void> {
     const result = await this.productModel
-      .deleteOne({ _id: id, business_profile_id: businessProfile._id })
+      .findOneAndUpdate(
+        { _id: id, business_profile_id: businessProfile._id, deleted: false },
+        { deleted: true },
+        { new: true },
+      )
       .exec();
 
-    if (result.deletedCount === 0) {
+    if (!result) {
       throw new NotFoundException(`Product with ID ${id} not found`);
     }
   }
@@ -80,7 +88,11 @@ export class ProductsService {
     category: string,
   ): Promise<Product[]> {
     return this.productModel
-      .find({ business_profile_id: businessProfile._id, category })
+      .find({
+        business_profile_id: businessProfile._id,
+        category,
+        deleted: false,
+      })
       .exec();
   }
 
@@ -106,6 +118,7 @@ export class ProductsService {
     return this.productModel
       .find({
         business_profile_id: businessProfile._id,
+        deleted: false,
         $or: [
           { item_name: { $regex: query, $options: 'i' } },
           { item_description: { $regex: query, $options: 'i' } },

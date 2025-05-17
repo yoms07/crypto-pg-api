@@ -8,7 +8,7 @@ export const createProductSchema = z.object({
   unit_currency: z.literal('IDR'),
   sku: z.string().optional(),
   stock: z.number().int().min(0).default(0),
-  image_url: z.string().url().optional(),
+  image_url: z.string().optional(),
   metadata: z.record(z.any()).optional(),
 });
 
