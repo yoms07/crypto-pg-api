@@ -60,4 +60,31 @@ export class MailService {
         ); // Add this line for loggin
       });
   }
+
+  sendPasswordResetEmail(email: string, name: string, token: string) {
+    const resetUrl = `${this.config.dashboard_url}/auth/reset-password?token=${token}`;
+    this.logger.log(
+      `Sending password reset email to ${email}:${name} with token ${token}`,
+    );
+    this.mailerService
+      .sendMail({
+        to: email,
+        subject: 'Lisk PG - Reset your password',
+        template: 'password-reset-mail',
+        context: {
+          name,
+          resetUrl,
+          currentYear: new Date().getFullYear(),
+        },
+      })
+      .then(() => {
+        this.logger.log(`Password reset email sent to ${email}`);
+      })
+      .catch((error) => {
+        this.logger.error(
+          `Failed to send password reset email to ${email}`,
+          error,
+        );
+      });
+  }
 }

@@ -8,12 +8,17 @@ import { InjectModel } from '@nestjs/mongoose';
 import { User } from '../schemas/user.schema';
 import { EmailVerification } from '../schemas/email-verification.schema';
 import { Otp } from '../schemas/otp.schema';
+import { PasswordReset } from '../schemas/password-reset.schema';
 import { Model } from 'mongoose';
 import { CreateOauthUserDto } from '../dto/create-oauth-user.dto';
 import { RegisterEmailDto } from '../dto/register-email.dto';
 import { VerifyEmailDto } from '../dto/verify-email.dto';
 import { LoginEmailDto, OtpWithoutCode } from '../dto/login-email.dto';
 import { VerifyOtpDto } from '../dto/verify-otp.dto';
+import {
+  ForgotPasswordRequest,
+  VerifyForgotPasswordRequest,
+} from '../dto/forgot-password.dto';
 import { hash, compare } from 'bcrypt';
 import * as crypto from 'crypto';
 import { MailService } from '../../mail/mail.service';
@@ -27,6 +32,8 @@ export class AuthService {
     private otpModel: Model<Otp>,
     @InjectModel(EmailVerification.name)
     private emailVerifModel: Model<EmailVerification>,
+    @InjectModel(PasswordReset.name)
+    private passwordResetModel: Model<PasswordReset>,
     private mailService: MailService,
   ) {}
 
@@ -119,7 +126,7 @@ export class AuthService {
     return savedVerification;
   }
 
-  async verifyEmail(verifyDto: VerifyEmailDto) {
+  async verifyEmail(verifyDto: VerifyEmailDto): Promise<{ email: string }> {
     // Find verification token
     const verification = await this.emailVerifModel.findOne({
       token: verifyDto.token,
@@ -149,7 +156,7 @@ export class AuthService {
     user.email_verified_at = new Date();
     await user.save();
 
-    return { success: true, message: 'Email verified successfully' };
+    return { email: user.email };
   }
 
   async loginEmail(loginDto: LoginEmailDto): Promise<OtpWithoutCode> {
@@ -165,7 +172,41 @@ export class AuthService {
 
     // Check if user is verified
     if (!user.email_verified) {
-      throw new UnauthorizedException('Email not verified');
+      // Find the latest verification token
+      const latestVerification = await this.emailVerifModel
+        .findOne({ user_id: user._id })
+        .sort({ created_at: -1 });
+
+      const shouldResendVerification =
+        !latestVerification || new Date() > latestVerification.expires_at;
+
+      if (shouldResendVerification) {
+        // Generate new verification token
+        const token = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + 24); // 24 hours expiration
+
+        // Save new verification token
+        const verification = new this.emailVerifModel({
+          user_id: user._id,
+          token,
+          expires_at: expiresAt,
+          is_used: false,
+        });
+
+        await verification.save();
+
+        // Send new verification email
+        this.mailService.sendVerificationEmail(user.email, user.name, token);
+
+        throw new UnauthorizedException(
+          'Email not verified. A new verification email has been sent.',
+        );
+      }
+
+      throw new UnauthorizedException(
+        'Email not verified. Please check your email for verification link.',
+      );
     }
 
     // Verify password
@@ -268,5 +309,101 @@ export class AuthService {
     }
 
     return user;
+  }
+
+  async forgotPassword(
+    request: ForgotPasswordRequest,
+  ): Promise<{ message: string }> {
+    const user = await this.userModel.findOne({
+      email: request.email,
+      provider: 'email',
+    });
+
+    if (!user) {
+      // Return success even if user doesn't exist for security
+      return {
+        message:
+          'If your email is registered, you will receive a password reset link.',
+      };
+    }
+
+    if (!user.email_verified) {
+      throw new UnauthorizedException('Email not verified');
+    }
+
+    // Check for existing unexpired reset tokens
+    const unexpiredTokens = await this.passwordResetModel.countDocuments({
+      user_id: user._id,
+      is_used: false,
+      expires_at: { $gt: new Date() },
+    });
+
+    if (unexpiredTokens >= 3) {
+      throw new BadRequestException(
+        'You have reached the maximum number of active password reset requests. Please wait for the existing ones to expire or use one of them.',
+      );
+    }
+
+    // Generate reset token
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 1); // 1 hour expiration
+
+    // Save password reset token
+    const passwordReset = new this.passwordResetModel({
+      user_id: user._id,
+      token,
+      expires_at: expiresAt,
+      is_used: false,
+    });
+
+    await passwordReset.save();
+
+    // Send password reset email
+    this.mailService.sendPasswordResetEmail(user.email, user.name, token);
+
+    return {
+      message:
+        'If your email is registered, you will receive a password reset link.',
+    };
+  }
+
+  async verifyForgotPassword(
+    request: VerifyForgotPasswordRequest,
+  ): Promise<{ message: string }> {
+    // Find password reset token
+    const passwordReset = await this.passwordResetModel.findOne({
+      token: request.token,
+      is_used: false,
+    });
+
+    if (!passwordReset) {
+      throw new BadRequestException('Invalid or expired reset token');
+    }
+
+    // Check if token is expired
+    if (passwordReset.expires_at < new Date()) {
+      throw new BadRequestException('Reset token has expired');
+    }
+
+    // Find user
+    const user = await this.userModel.findById(passwordReset.user_id);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Hash new password
+    const saltRounds = 10;
+    const passwordHash = await hash(request.password, saltRounds);
+
+    // Update user's password
+    user.password_hash = passwordHash;
+    await user.save();
+
+    // Mark token as used
+    passwordReset.is_used = true;
+    await passwordReset.save();
+
+    return { message: 'Password has been reset successfully' };
   }
 }

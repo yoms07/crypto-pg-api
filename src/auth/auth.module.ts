@@ -9,6 +9,8 @@ import {
   UserSchema,
   Otp,
   OtpSchema,
+  PasswordReset,
+  PasswordResetSchema,
 } from './schemas';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
@@ -17,7 +19,7 @@ import { SessionService } from './service/session.service';
 import { MailModule } from 'src/mail/mail.module';
 import jwtConfig from 'src/config/jwt.config';
 import { AuthGuard } from './guards/auth.guard';
-
+import urlConfig from '@/config/url.config';
 @Module({
   imports: [
     MongooseModule.forFeature([
@@ -33,8 +35,13 @@ import { AuthGuard } from './guards/auth.guard';
         name: Otp.name,
         schema: OtpSchema,
       },
+      {
+        name: PasswordReset.name,
+        schema: PasswordResetSchema,
+      },
     ]),
     ConfigModule.forFeature(jwtConfig),
+    ConfigModule.forFeature(urlConfig),
     MailModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

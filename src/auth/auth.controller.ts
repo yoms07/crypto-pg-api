@@ -6,6 +6,8 @@ import {
   UsePipes,
   Query,
   UnauthorizedException,
+  Res,
+  Inject,
 } from '@nestjs/common';
 import { ZodValidationPipe } from 'src/zod-validation';
 import {
@@ -24,12 +26,23 @@ import { VerifyEmailDto, verifyEmailDto } from './dto/verify-email.dto';
 import { VerifyOtpDto, verifyOtpDto } from './dto/verify-otp.dto';
 import { Session } from './entities/session.entity';
 import { ApiResponse, ApiResponseBuilder } from 'src/common/response.common';
+import { Response } from 'express';
+import { ConfigType } from '@nestjs/config';
+import urlConfig from '@/config/url.config';
+import {
+  ForgotPasswordRequest,
+  forgotPasswordRequestSchema,
+  VerifyForgotPasswordRequest,
+  verifyForgotPasswordRequestSchema,
+} from './dto/forgot-password.dto';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly sessionService: SessionService,
+    @Inject(urlConfig.KEY)
+    private config: ConfigType<typeof urlConfig>,
   ) {}
 
   @Post('email/login')
@@ -76,11 +89,15 @@ export class AuthController {
 
   @Get('verify-email')
   @UsePipes(new ZodValidationPipe(verifyEmailDto))
-  async verifyEmail(
-    @Query() verifyDto: VerifyEmailDto,
-  ): Promise<ApiResponse<{ success: boolean; message: string }>> {
+  async verifyEmail(@Query() verifyDto: VerifyEmailDto, @Res() res: Response) {
     const response = await this.authService.verifyEmail(verifyDto);
-    return ApiResponseBuilder.success(response, 'Successfully verified email');
+    console.log('frontend_url', this.config.dashboard_url);
+    return res.render('verification-success', {
+      success: true,
+      message: 'Successfully verified email',
+      email: response.email,
+      frontend_url: this.config.dashboard_url,
+    });
   }
 
   @Post('verify-otp')
@@ -133,6 +150,30 @@ export class AuthController {
     return ApiResponseBuilder.success(
       response,
       'Session refreshed successfully',
+    );
+  }
+
+  @Post('forgot-password')
+  @UsePipes(new ZodValidationPipe(forgotPasswordRequestSchema))
+  async forgotPassword(
+    @Body() request: ForgotPasswordRequest,
+  ): Promise<ApiResponse<null>> {
+    await this.authService.forgotPassword(request);
+    return ApiResponseBuilder.success(
+      null,
+      'If your email is registered, you will receive a password reset link.',
+    );
+  }
+
+  @Post('reset-password')
+  @UsePipes(new ZodValidationPipe(verifyForgotPasswordRequestSchema))
+  async verifyForgotPassword(
+    @Body() request: VerifyForgotPasswordRequest,
+  ): Promise<ApiResponse<null>> {
+    await this.authService.verifyForgotPassword(request);
+    return ApiResponseBuilder.success(
+      null,
+      'Password has been reset successfully',
     );
   }
 }

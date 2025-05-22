@@ -9,6 +9,11 @@
         "include": "mail/templates/**/*.hbs",
         "outDir": "dist",
         "watchAssets": true
+      },
+      {
+        "include": "auth/templates/**/*.hbs",
+        "outDir": "dist",
+        "watchAssets": true
       }
     ]
   }

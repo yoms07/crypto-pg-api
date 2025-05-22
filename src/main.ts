@@ -6,9 +6,10 @@ import {
   utilities,
 } from 'nest-winston';
 import * as winston from 'winston';
-
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     rawBody: true,
     abortOnError: false,
     logger: WinstonModule.createLogger({
@@ -28,6 +29,9 @@ async function bootstrap() {
       exitOnError: false,
     }),
   });
+
+  app.setBaseViewsDir([join(__dirname, 'auth', 'templates')]);
+  app.setViewEngine('hbs');
 
   app.enableCors();
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
